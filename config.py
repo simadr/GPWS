@@ -3,8 +3,9 @@ from ivy.std_api import *
 import sys, logging
 
 logger = logging.getLogger('Ivy')
+from optparse import OptionParser
 
-FLAPS = ["flap 0", "flap 1", "flap 2"]
+FLAPS = ["flap 0", "flap 1"]
 GEARS = ["Down", "Up"]
 
 bus = "127.255.255.255:2010"
@@ -112,6 +113,25 @@ ui = Ui_config()
 ui.setupUi(config)
 config.show()
 
+#parse
+usage = "usage: %prog [options]"
+parser = OptionParser(usage=usage)
+parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="Configuration")
+parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                  help='Be verbose.')
+parser.add_option('-i', '--interval', type='int', dest='interval',
+                  help='Interval between messages (in seconds)')
+parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
+                  help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
+parser.add_option('-a', '--appname', type='string', dest='app_name',
+                  help='Application Name')
+(options, args) = parser.parse_args()
+
+# init log
+level = logging.INFO
+if options.verbose: # update logging level
+    level = logging.DEBUG
+logger.setLevel(level)
 
 #ivy connection
 def on_cx_proc(agent, connected):
@@ -140,6 +160,6 @@ def send_config():
 ui.verticalSlider.valueChanged.connect(send_config)
 ui.gear_up.toggled.connect(send_config)
 
-connect("Configuration", bus)
+connect(options.app_name, options.ivy_bus)
 sys.exit(app.exec_())
 
