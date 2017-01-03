@@ -1,5 +1,9 @@
-UP = "0"
-DOWN = "1"
+try:
+    import pygame
+    TEST_SON = True
+except ImportError:
+    print("Module pygame non installe : impossible de lire les sons")
+    TEST_SON = False
 
 class Enveloppe():
     def __init__(self, vertexes, alertlevel, priority, flaps, gear, phase):
@@ -9,6 +13,9 @@ class Enveloppe():
         self.flaps = flaps
         self.gear = gear
         self.phase = phase
+        self.sound = "sons/abn2500.wav" # to change
+
+
     def collision(self,P):
         graphe = self.vertexes
         nbp = len(graphe)
@@ -28,11 +35,24 @@ class Enveloppe():
             if d>0 :
                 return False
         return True
+
+
     def have_inside(self, point, flaps, gear):
         if (flaps != self.flaps and self.flaps != None) or (gear != self.gear and self.gear != None): # Si la config n'est pas bonne
             return False
         else:
             return self.collision(point)
+
+    def play_sound(self):
+        if TEST_SON:
+            pygame.init()
+            song = pygame.mixer.Sound(self.sound)
+            song.play()
+            while pygame.mixer.get_busy():
+                 pygame.time.delay(100)
+            pygame.quit()
+        else:
+            print("Lecture de ", self.sound)
 
 class Mode():
     def __init__(self, list_enveloppes,phase):
@@ -80,7 +100,7 @@ print(SinkRate1.collision([x1,y1]))
 #Mode 2
 PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],0,1,None,1,1)
 Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],1,1,1,1,1)
-Mode2 = Mode([PulUp2,Terrain2],None)
+Mode2 = Mode([PullUp2,Terrain2],None)
 
 x2 = Etat0.TerrainClosureRate # ft/mn
 y2 = Etat0.RadioAltitude # ft
@@ -124,9 +144,11 @@ print(GlideSlope5.collision([x5,y5]))
 
 #Mode 6
 ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],1,1,1,1,1)
-Mode6 = Mode([ExRollAngle])
+Mode6 = Mode([ExRollAngle6],0)
 
 x6 = Etat0.RollAngle # degrees
 y6 = Etat0.HeightAboveTerrain # ft
 
 print(ExRollAngle6.collision([x6,y6]))
+ExRollAngle6.play_sound()
+
