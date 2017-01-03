@@ -5,7 +5,7 @@ import sys, logging
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
 
-FLAPS = ["flap 0", "flap 1"]
+FLAPS = ["Full", "3", "2", "1", "0"]
 GEARS = ["Down", "Up"]
 
 bus = "127.255.255.255:2010"
