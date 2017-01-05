@@ -1,7 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from ivy.std_api import *
 import sys, logging
-
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
 
@@ -105,10 +104,16 @@ class Ui_config(object):
         flaps = FLAPS[self.verticalSlider.sliderPosition()]
         return (gear, flaps)
 
+# Reimplementation de la closeEvent pour quitter ivy lorsque la fenetre se ferme
+class ConfigWindow(QtWidgets.QMainWindow):
+    def closeEvent(self, event):
+        IvyStop()
+        QtGui.QCloseEvent(event)
+
 
 # Main
 app = QtWidgets.QApplication(sys.argv)
-config = QtWidgets.QMainWindow()
+config = ConfigWindow()
 ui = Ui_config()
 ui.setupUi(config)
 config.show()
@@ -134,11 +139,16 @@ if options.verbose: # update logging level
 logger.setLevel(level)
 
 #ivy connection
+def send_config():
+    (gear, flaps) = ui.getConfig()
+    IvySendMsg('Config GEAR={0} FLAPS={1}'.format(gear, flaps))
+
 def on_cx_proc(agent, connected):
     if connected == IvyApplicationDisconnected:
         logger.error('Ivy application %r was disconnected', agent)
     else:
         logger.info('Ivy application %r was connected', agent)
+        send_config()
 
 
 def on_die_proc(agent, _id):
@@ -153,12 +163,9 @@ def connect(app_name, ivy_bus):
             on_die_proc)
     IvyStart(ivy_bus)
 
-def send_config():
-    (gear, flaps) = ui.getConfig()
-    IvySendMsg('Config GEAR={0} FLAPS={1}'.format(gear, flaps))
-
 ui.verticalSlider.valueChanged.connect(send_config)
 ui.gear_up.toggled.connect(send_config)
+
 
 connect(options.app_name, options.ivy_bus)
 sys.exit(app.exec_())
