@@ -15,7 +15,6 @@ class Enveloppe():
         self.phase = phase
         self.sound = "sons/abn2500.wav" # to change
 
-
     def collision(self,P):
         graphe = self.vertexes
         nbp = len(graphe)
@@ -35,7 +34,6 @@ class Enveloppe():
             if d>0 :
                 return False
         return True
-
 
     def have_inside(self, point, flaps, gear):
         if (flaps != self.flaps and self.flaps != None) or (gear != self.gear and self.gear != None): # Si la config n'est pas bonne
@@ -96,6 +94,7 @@ y1 = Etat0.RadioAltitude # ft
 
 print(PullUp1.collision([x1,y1]))
 print(SinkRate1.collision([x1,y1]))
+print(Mode1.get_enveloppe([x1,y1],None,None))
 
 #Mode 2
 PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],0,1,None,1,1)
@@ -107,6 +106,7 @@ y2 = Etat0.RadioAltitude # ft
 
 print(PullUp2.collision([x2,y2]))
 print(Terrain2.collision([x2,y2]))
+print(Mode2.get_enveloppe([x2,y2],None,None))
 
 #Mode 3
 DontSink = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],1,1,1,1,1)
@@ -116,6 +116,7 @@ x3 = Etat0.MSLAltitudeLoss # ft
 y3 = Etat0.RadioAltitude # ft
 
 print(DontSink.collision([x3,y3]))
+print(Mode3.get_enveloppe([x3,y3],None,None))
 
 #Mode 4
 TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],1,1,1,1,1)
@@ -151,4 +152,3 @@ y6 = Etat0.HeightAboveTerrain # ft
 
 print(ExRollAngle6.collision([x6,y6]))
 ExRollAngle6.play_sound()
-
