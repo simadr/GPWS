@@ -14,6 +14,7 @@ class Enveloppe():
         self.gear = gear
         self.phase = phase
         self.sound = "sons/abn2500.wav" # to change
+        self.name = "Nom" #to change
 
     def collision(self,P):
         graphe = self.vertexes
@@ -92,10 +93,6 @@ Mode1 = Mode([PullUp1,SinkRate1],None)
 x1 = Etat0.VerticalSpeed # ft/mn
 y1 = Etat0.RadioAltitude # ft
 
-print(PullUp1.collision([x1,y1]))
-print(SinkRate1.collision([x1,y1]))
-print(Mode1.get_enveloppe([x1,y1],None,None))
-
 #Mode 2
 PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],0,1,None,1,1)
 Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],1,1,1,1,1)
@@ -104,9 +101,6 @@ Mode2 = Mode([PullUp2,Terrain2],None)
 x2 = Etat0.TerrainClosureRate # ft/mn
 y2 = Etat0.RadioAltitude # ft
 
-print(PullUp2.collision([x2,y2]))
-print(Terrain2.collision([x2,y2]))
-print(Mode2.get_enveloppe([x2,y2],None,None))
 
 #Mode 3
 DontSink = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],1,1,1,1,1)
@@ -115,8 +109,6 @@ Mode3 = Mode([DontSink],"Takeoff")
 x3 = Etat0.MSLAltitudeLoss # ft
 y3 = Etat0.RadioAltitude # ft
 
-print(DontSink.collision([x3,y3]))
-print(Mode3.get_enveloppe([x3,y3],None,None))
 
 #Mode 4
 TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],1,1,1,1,1)
@@ -127,10 +119,6 @@ Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],None)
 x4 = Etat0.ComputedAirSpeed # kts
 y4 = Etat0.RadioAltitude # ft
 
-print(TooLowTerrain4.collision([x4,y4]))
-print(TooLowFlaps4.collision([x4,y4]))
-print(TooLowGear4.collision([x4,y4]))
-
 #Mode 5
 GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],1,1,1,1,1)
 GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],1,1,1,1,1)
@@ -140,15 +128,9 @@ y5 = Etat0.RadioAltitude # ft
 
 Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],"Approach")
 
-print(GlideSlopeReduced5.collision([x5,y5]))
-print(GlideSlope5.collision([x5,y5]))
-
 #Mode 6
 ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],1,1,1,1,1)
 Mode6 = Mode([ExRollAngle6],0)
 
 x6 = Etat0.RollAngle # degrees
 y6 = Etat0.HeightAboveTerrain # ft
-
-print(ExRollAngle6.collision([x6,y6]))
-ExRollAngle6.play_sound()
