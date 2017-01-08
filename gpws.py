@@ -1,10 +1,3 @@
-from ivy.std_api import *
-import sys, logging
-logger = logging.getLogger('Ivy')
-from optparse import OptionParser
-
-bus = "127.255.255.255:2010"
-
 try:
     import pygame
     TEST_SON = True
@@ -21,7 +14,6 @@ class Enveloppe():
         self.gear = gear
         self.phase = phase
         self.sound = "sons/abn2500.wav" # to change
-        self.name = "Nom" #to change
 
     def collision(self,P):
         graphe = self.vertexes
@@ -76,7 +68,7 @@ class Mode():
         else:
             key_sort = lambda env : env.priority
             enveloppe_eff.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
-            return enveloppe_eff[0]
+            return enveloppe_eff
 
 class Etat():
     def __init__(self,VerticalSpeed,RadioAltitude,TerrainClosureRate,MSLAltitudeLoss,ComputedAirSpeed,GlideSlopeDeviation,RollAngle,HeightAboveTerrain):
@@ -89,120 +81,74 @@ class Etat():
         self.RollAngle = RollAngle
         self.HeightAboveTerrain = HeightAboveTerrain
 
-    def radio_alt(self, z):
-        self.RadioAltitude = z
 
-    def __repr__(self):
-        return "Radio_alt = {}".format(self.RadioAltitude)
+PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],0,1,None,None,1)
+SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],1,1,None,None,1)
+
+PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],0,1,None,1,1)
+Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],1,1,None,None,1)
+
+DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],1,1,None,None,1)
+
+TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],1,1,None,None,1)
+TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],1,1,None,None,1)
+TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],1,1,None,None,1)
+
+GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],1,1,None,None,1)
+GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],1,1,1,1,1)
+
+ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],1,1,None,None,1)
 
 Etat0 = Etat(0, 0, 0, 0, 0, 0, 0, 0)
 
-#Mode 1
-PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],0,1,None,None,1)
-SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],1,1,None,None,1)
-Mode1 = Mode([PullUp1,SinkRate1],None)
+def test_mode(Etat):
+    #Mode 1
+    Mode1 = Mode([PullUp1,SinkRate1],None)
+    x1 = Etat.VerticalSpeed # ft/mn
+    y1 = Etat.RadioAltitude # ft
+    #print(PullUp1.collision([x1,y1]))
+    #print(SinkRate1.collision([x1,y1]))
+    print(Mode1.get_enveloppe([x1,y1],None,None))
 
-x1 = Etat0.VerticalSpeed # ft/mn
-y1 = Etat0.RadioAltitude # ft
+    #Mode 2
+    Mode2 = Mode([PullUp2,Terrain2],None)
+    x2 = Etat.TerrainClosureRate # ft/mn
+    y2 = Etat.RadioAltitude # ft
+    # print(PullUp2.collision([x2,y2]))
+    # print(Terrain2.collision([x2,y2]))
+    print(Mode2.get_enveloppe([x2,y2],None,None))
 
-#Mode 2
-PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],0,1,None,1,1)
-Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],1,1,1,1,1)
-Mode2 = Mode([PullUp2,Terrain2],None)
+    #Mode 3
+    Mode3 = Mode([DontSink3],"Takeoff")
+    x3 = Etat.MSLAltitudeLoss # ft
+    y3 = Etat.RadioAltitude # ft
+    print(DontSink3.collision([x3,y3]))
+    print(Mode3.get_enveloppe([x3,y3],None,None))
 
-x2 = Etat0.TerrainClosureRate # ft/mn
-y2 = Etat0.RadioAltitude # ft
+    #Mode 4
+    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],None)
+    x4 = Etat.ComputedAirSpeed # kts
+    y4 = Etat.RadioAltitude # ft
+    # print(TooLowTerrain4.collision([x4,y4]))
+    # print(TooLowFlaps4.collision([x4,y4]))
+    # print(TooLowGear4.collision([x4,y4]))
+    print(Mode4.get_enveloppe([x4,y4],None,None))
 
+    #Mode 5
+    x5 = Etat.GlideSlopeDeviation# dots
+    y5 = Etat.RadioAltitude # ft
+    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],"Approach")
+    # print(GlideSlopeReduced5.collision([x5,y5]))
+    # print(GlideSlope5.collision([x5,y5]))
+    print(Mode5.get_enveloppe([x5,y5],None,None))
 
-#Mode 3
-DontSink = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],1,1,1,1,1)
-Mode3 = Mode([DontSink],"Takeoff")
+    #Mode 6
 
-x3 = Etat0.MSLAltitudeLoss # ft
-y3 = Etat0.RadioAltitude # ft
+    Mode6 = Mode([ExRollAngle6],0)
+    x6 = Etat.RollAngle # degrees
+    y6 = Etat.HeightAboveTerrain # ft
+    # print(ExRollAngle6.collision([x6,y6]))
+    print(Mode6.get_enveloppe([x6,y6],None,None))
+    ExRollAngle6.play_sound()
 
-
-#Mode 4
-TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],1,1,1,1,1)
-TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],1,1,1,1,1)
-TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],1,1,1,1,1)
-Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],None)
-
-x4 = Etat0.ComputedAirSpeed # kts
-y4 = Etat0.RadioAltitude # ft
-
-#Mode 5
-GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],1,1,1,1,1)
-GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],1,1,1,1,1)
-
-x5 = Etat0.GlideSlopeDeviation# dots
-y5 = Etat0.RadioAltitude # ft
-
-Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],"Approach")
-
-#Mode 6
-ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],1,1,1,1,1)
-Mode6 = Mode([ExRollAngle6],0)
-
-x6 = Etat0.RollAngle # degrees
-y6 = Etat0.HeightAboveTerrain # ft
-
-
-global_etat = Etat(0, 0, 0, 0, 0, 0, 0, 0)
-#parse
-usage = "usage: %prog [options]"
-parser = OptionParser(usage=usage)
-parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
-parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
-                  help='Be verbose.')
-parser.add_option('-i', '--interval', type='int', dest='interval',
-                  help='Interval between messages (in seconds)')
-parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
-                  help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
-parser.add_option('-a', '--appname', type='string', dest='app_name',
-                  help='Application Name')
-(options, args) = parser.parse_args()
-
-# init log
-level = logging.INFO
-if options.verbose: # update logging level
-    level = logging.DEBUG
-logger.setLevel(level)
-
-#### IVY ####
-def on_cx_proc(agent, connected):
-    if connected == IvyApplicationDisconnected:
-        logger.error('Ivy application %r was disconnected', agent)
-    else:
-        logger.info('Ivy application %r was connected', agent)
-
-
-def on_die_proc(agent, _id):
-    logger.info('received the order to die from %r with id = %d', agent, _id)
-
-
-def connect(app_name, ivy_bus):
-    IvyInit(app_name,                   # application name for Ivy
-            "[%s ready]" % app_name,    # ready message
-            0,                          # main loop is local (ie. using IvyMainloop)
-            on_cx_proc,                 # handler called on connection/disconnection
-            on_die_proc)
-    IvyStart(ivy_bus)
-
-def on_time(agent, *larg):
-    logger.info("Receive time : %s" % larg[0])
-    print ("t=", larg[0])
-
-def on_radioalt(agent, *larg):
-    z = larg[0]
-    logger.info("Receive radio allitude : %s" % z)
-    global_etat.radio_alt(z)
-    print global_etat
-
-def on_statevector(agent, *larg):
-    pass
-
-connect(options.app_name, options.ivy_bus)
-IvyBindMsg(on_time, '^Time t=(\S+)')
-IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
-IvyMainLoop()
+test_mode(Etat0)
