@@ -1,3 +1,10 @@
+from ivy.std_api import *
+import sys, logging
+logger = logging.getLogger('Ivy')
+from optparse import OptionParser
+
+bus = "127.255.255.255:2010"
+
 try:
     import pygame
     TEST_SON = True
@@ -82,6 +89,11 @@ class Etat():
         self.RollAngle = RollAngle
         self.HeightAboveTerrain = HeightAboveTerrain
 
+    def radio_alt(self, z):
+        self.RadioAltitude = z
+
+    def __repr__(self):
+        return "Radio_alt = {}".format(self.RadioAltitude)
 
 Etat0 = Etat(0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -134,3 +146,63 @@ Mode6 = Mode([ExRollAngle6],0)
 
 x6 = Etat0.RollAngle # degrees
 y6 = Etat0.HeightAboveTerrain # ft
+
+
+global_etat = Etat(0, 0, 0, 0, 0, 0, 0, 0)
+#parse
+usage = "usage: %prog [options]"
+parser = OptionParser(usage=usage)
+parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
+parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                  help='Be verbose.')
+parser.add_option('-i', '--interval', type='int', dest='interval',
+                  help='Interval between messages (in seconds)')
+parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
+                  help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
+parser.add_option('-a', '--appname', type='string', dest='app_name',
+                  help='Application Name')
+(options, args) = parser.parse_args()
+
+# init log
+level = logging.INFO
+if options.verbose: # update logging level
+    level = logging.DEBUG
+logger.setLevel(level)
+
+#### IVY ####
+def on_cx_proc(agent, connected):
+    if connected == IvyApplicationDisconnected:
+        logger.error('Ivy application %r was disconnected', agent)
+    else:
+        logger.info('Ivy application %r was connected', agent)
+
+
+def on_die_proc(agent, _id):
+    logger.info('received the order to die from %r with id = %d', agent, _id)
+
+
+def connect(app_name, ivy_bus):
+    IvyInit(app_name,                   # application name for Ivy
+            "[%s ready]" % app_name,    # ready message
+            0,                          # main loop is local (ie. using IvyMainloop)
+            on_cx_proc,                 # handler called on connection/disconnection
+            on_die_proc)
+    IvyStart(ivy_bus)
+
+def on_time(agent, *larg):
+    logger.info("Receive time : %s" % larg[0])
+    print ("t=", larg[0])
+
+def on_radioalt(agent, *larg):
+    z = larg[0]
+    logger.info("Receive radio allitude : %s" % z)
+    global_etat.radio_alt(z)
+    print global_etat
+
+def on_statevector(agent, *larg):
+    pass
+
+connect(options.app_name, options.ivy_bus)
+IvyBindMsg(on_time, '^Time t=(\S+)')
+IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
+IvyMainLoop()

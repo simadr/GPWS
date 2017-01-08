@@ -138,11 +138,12 @@ if options.verbose: # update logging level
     level = logging.DEBUG
 logger.setLevel(level)
 
-#ivy connection
+#Msg send
 def send_config():
     (gear, flaps) = ui.getConfig()
     IvySendMsg('Config GEAR={0} FLAPS={1}'.format(gear, flaps))
 
+#ivy connection
 def on_cx_proc(agent, connected):
     if connected == IvyApplicationDisconnected:
         logger.error('Ivy application %r was disconnected', agent)
