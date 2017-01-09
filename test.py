@@ -89,7 +89,7 @@ def create_testMode1(vzi, vzf, ralti, raltf, nb_points, filename):
 
 def create_test(mode, gamma, absi, absf, ordi, ordf, nb_points, filename):
     """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
-    etat = gpws.Etat(0,0,0,0,0,0,0)
+    etat = gpws.Etat(0,5000,0,0,0,0,0)
     pas_abs = (absf - absi) / nb_points
     pas_ord = (ordf - ordi) / nb_points
     abs = absi
@@ -97,10 +97,8 @@ def create_test(mode, gamma, absi, absf, ordi, ordf, nb_points, filename):
     fic = open(filename, "w")
     for i in range(nb_points):
         etat.set_xy(abs, ord, mode)
-        time = "Time t={}\n".format(i)
         radio_alt =  etat.generate_radioalt()
         statevector = etat.generate_statevector(gamma)
-        fic.write(time)
         fic.write(radio_alt)
         fic.write(statevector)
         abs += pas_abs

@@ -1,5 +1,5 @@
 from ivy.std_api import *
-import sys, logging,math
+import sys, logging, math
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
 
@@ -148,6 +148,14 @@ class Etat():
     def change_radio_alt(self, z):
         self.list[RADIOALT] = z
 
+    def change_state(self, x, y, z, vp, fpa, psi, phi):
+        self.list[COMPUTED_AIR_SPEED] = vp  * 1,94384 #conversion ms to kts
+        self.list[VZ] = (math.sin(fpa) * vp) * 196,85 #conversion m/s to ft/min
+        self.list[ROLL_ANGLE] = math.degrees(phi)
+
+    def change_fmsinfo(self, phase, da, dh):
+        self.phase = phase
+
     def __repr__(self):
         return "Radio_alt = {}".format(self.list[RADIOALT])
 
@@ -242,13 +250,25 @@ if __name__ == '__main__':
 
     def on_radioalt(agent, *larg):
         z = larg[0]
-        logger.info("Receive radio allitude : %s" % z)
+        logger.info("Receive radio altitude : %s" % z)
         global_etat.change_radio_alt(z)
 
     def on_statevector(agent, *larg):
+        x = larg[0]
+        y = larg[1]
+        z = larg[2]
+        vp = larg[3]
+        fpa = larg[4]
+        psi = larg[5]
+        phi = larg[6]
+        global_etat.change_state(x, y, z, vp, fpa, psi, phi)
+
+    def on_fms(agent, *larg):
         pass
+
 
     connect(options.app_name, options.ivy_bus)
     IvyBindMsg(on_time, '^Time t=(\S+)')
     IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
-IvyMainLoop()
+    IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
+    IvyMainLoop()
