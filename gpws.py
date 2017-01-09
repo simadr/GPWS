@@ -1,3 +1,10 @@
+from ivy.std_api import *
+import sys, logging,math
+logger = logging.getLogger('Ivy')
+from optparse import OptionParser
+
+bus = "127.255.255.255:2010"
+
 try:
     import pygame
     TEST_SON = True
@@ -5,15 +12,24 @@ except ImportError:
     print("Module pygame non installe : impossible de lire les sons")
     TEST_SON = False
 
+# Abcsisses/Ordornnees des modes
+VZ = 0
+RADIOALT = 1
+TERRAIN_CLOSURE_RATE = 2
+MSL_ALT_LOSS = 3
+COMPUTED_AIR_SPEED = 4
+GLIDE_SLOPE_DEVIATION = 5
+ROLL_ANGLE = 6
+
 class Enveloppe():
-    def __init__(self, vertexes, alertlevel, priority, flaps, gear, phase):
+    def __init__(self, vertexes, alertlevel, priority, flaps, gear):
         self.vertexes = vertexes
         self.alertlevel = alertlevel
         self.priority = priority
         self.flaps = flaps
         self.gear = gear
-        self.phase = phase
         self.sound = "sons/abn2500.wav" # to change
+        self.name = "Nom" #to change
 
     def collision(self,P):
         graphe = self.vertexes
@@ -36,7 +52,7 @@ class Enveloppe():
         return True
 
     def have_inside(self, point, flaps, gear):
-        if (flaps != self.flaps and self.flaps != None) or (gear != self.gear and self.gear != None): # Si la config n'est pas bonne
+        if (flaps not in self.flaps and self.flaps[0] != 0) or (gear not in self.gear and self.flaps[0] !=0): # Si la config n'est pas bonne
             return False
         else:
             return self.collision(point)
@@ -53,10 +69,12 @@ class Enveloppe():
             print("Lecture de ", self.sound)
 
 class Mode():
-    def __init__(self, list_enveloppes,phase):
+    def __init__(self, list_enveloppes,phase,abs,ord):
         self.list_enveloppes = list_enveloppes
         self.phase = phase
         self.on = True
+        self.ord = ord
+        self.abs = abs
 
     def get_enveloppe(self, point, flaps, gear):
         enveloppe_eff = [] #listes des enveloppes ou se trouve le point
@@ -68,87 +86,169 @@ class Mode():
         else:
             key_sort = lambda env : env.priority
             enveloppe_eff.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
-            return enveloppe_eff
+            return enveloppe_eff[0]
 
 class Etat():
-    def __init__(self,VerticalSpeed,RadioAltitude,TerrainClosureRate,MSLAltitudeLoss,ComputedAirSpeed,GlideSlopeDeviation,RollAngle,HeightAboveTerrain):
-        self.VerticalSpeed = VerticalSpeed
-        self.RadioAltitude = RadioAltitude
-        self.TerrainClosureRate = TerrainClosureRate
-        self.MSLAltitudeLoss = MSLAltitudeLoss
-        self.ComputedAirSpeed = ComputedAirSpeed
-        self.GlideSlopeDeviation = GlideSlopeDeviation
-        self.RollAngle = RollAngle
-        self.HeightAboveTerrain = HeightAboveTerrain
+    def __init__(self,VerticalSpeed,RadioAltitude,TerrainClosureRate,MSLAltitudeLoss,ComputedAirSpeed,GlideSlopeDeviation,RollAngle,flaps,gear,phase):
+        self.list = [VerticalSpeed, RadioAltitude, TerrainClosureRate, MSLAltitudeLoss, ComputedAirSpeed, GlideSlopeDeviation, RollAngle]
+        self.flaps = flaps
+        self.gear = gear
+        self.phase = phase
+
+    def get_VerticalSpeed(self):
+        return self.list[VZ]
+
+    def get_RadioAltitude(self):
+        return self.list[RADIOALT]
+
+    def get_TerrainClosureRate(self):
+        return self.list[TERRAIN_CLOSURE_RATE]
+
+    def get_MSLAltitudeLoss(self):
+        return self.list[MSL_ALT_LOSS]
+
+    def get_ComputedAirSpeed(self):
+        return self.list[COMPUTED_AIR_SPEED]
+
+    def get_GlideSlopeDeviation(self):
+        return self.list[GLIDE_SLOPE_DEVIATION]
+
+    def get_RollAngle(self):
+        return self.list[ROLL_ANGLE]
+
+    def generate_radioalt(self):
+        return "RadioAltimeter groundAlt={}\n".format(self.list[RADIOALT] * 0.3048)
+
+    def generate_statevector(self, gamma):
+        """ Pour les tests uniquement """
+        x = 0
+        y = 0
+        z = 0
+        fpa = gamma
+        if gamma !=0 and self.get_VerticalSpeed() != 0 :
+            vp = self.get_VerticalSpeed()/math.sin(gamma) * 0.00508 #Conversion ft/min to m/s
+        else: vp = self.get_ComputedAirSpeed() * 0.514444# Conversion kts to m/s
+        psi = 0
+        phi = self.get_RollAngle()
+        return "StateVector x={0} y={1} z={2} Vp={3} fpa={4} psi={5} phi={6}\n".format(x, y, z, vp, fpa, psi, phi)
+
+    def get_xy(self, mode):
+        return (self.list[mode.abs], self.list[mode.ord])
+
+    def set_xy(self, x, y, mode, gamma=0):
+        """  Modifie l'etat de sorte qu'il se trouve aux coord (x,y) dans le mode passe en param  """
+        self.list[mode.abs] = x
+        self.list[mode.ord] = y
+        if mode.abs == VZ and gamma != 0:  #si on change la vz, on change la vp
+            self.list[COMPUTED_AIR_SPEED]  = x/math.sin(gamma)
+        elif mode.abs == COMPUTED_AIR_SPEED:
+            self.list[VZ] = self.get_ComputedAirSpeed() * math.sin(gamma)
 
 
-PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],0,1,None,None,1)
-SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],1,1,None,None,1)
+    def change_radio_alt(self, z):
+        self.list[RADIOALT] = z
 
-PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],0,1,None,1,1)
-Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],1,1,None,None,1)
+    def __repr__(self):
+        return "Radio_alt = {}".format(self.list[RADIOALT])
 
-DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],1,1,None,None,1)
+def Creation_Modes():
 
-TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],1,1,None,None,1)
-TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],1,1,None,None,1)
-TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],1,1,None,None,1)
+    PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],'W',2,[None],[None])
+    SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],'C',17,[None],[None])
+    PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],'W',3,[None],[None])
+    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,[None],[None])
+    DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None])
+    TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None])
+    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None])
+    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],["UP"])
+    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],"DOWN")
+    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',18.5,[None],["DOWN"])
+    ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],'C',22,[None],[None])
 
-GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],1,1,None,None,1)
-GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],1,1,1,1,1)
+    Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
+    Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT)
+    Mode3 = Mode([DontSink3],["CLIMB"],MSL_ALT_LOSS,RADIOALT)
+    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],["APPROACH","LANDING","TAKE-OFF"],COMPUTED_AIR_SPEED,RADIOALT)
+    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],["APPROACH"],GLIDE_SLOPE_DEVIATION,RADIOALT)
+    Mode6 = Mode([ExRollAngle6],[None],ROLL_ANGLE,RADIOALT)
 
-ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],1,1,None,None,1)
+    return [Mode1,Mode2,Mode3,Mode4,Mode5,Mode6]
 
-Etat0 = Etat(0, 0, 0, 0, 0, 0, 0, 0)
+L_Modes = Creation_Modes()
 
 def test_mode(Etat):
-    #Mode 1
-    Mode1 = Mode([PullUp1,SinkRate1],None)
-    x1 = Etat.VerticalSpeed # ft/mn
-    y1 = Etat.RadioAltitude # ft
-    #print(PullUp1.collision([x1,y1]))
-    #print(SinkRate1.collision([x1,y1]))
-    print(Mode1.get_enveloppe([x1,y1],None,None))
+    flaps = Etat.flaps
+    gear = Etat.gear
+    L = []
+    for Mode in L_Modes:
+        if Etat.phase in Mode.phase:
+            x,y = Etat.get_xy(Mode)
+            L.append(Mode.get_enveloppe([x,y],flaps,gear))
 
-    #Mode 2
-    Mode2 = Mode([PullUp2,Terrain2],None)
-    x2 = Etat.TerrainClosureRate # ft/mn
-    y2 = Etat.RadioAltitude # ft
-    # print(PullUp2.collision([x2,y2]))
-    # print(Terrain2.collision([x2,y2]))
-    print(Mode2.get_enveloppe([x2,y2],None,None))
+    L = [e for e in L if e!= None]
+    key_sort = lambda env : env.priority
+    L.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
+    return (L[0] if len(L)!=0 else [])
 
-    #Mode 3
-    Mode3 = Mode([DontSink3],"Takeoff")
-    x3 = Etat.MSLAltitudeLoss # ft
-    y3 = Etat.RadioAltitude # ft
-    print(DontSink3.collision([x3,y3]))
-    print(Mode3.get_enveloppe([x3,y3],None,None))
 
-    #Mode 4
-    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],None)
-    x4 = Etat.ComputedAirSpeed # kts
-    y4 = Etat.RadioAltitude # ft
-    # print(TooLowTerrain4.collision([x4,y4]))
-    # print(TooLowFlaps4.collision([x4,y4]))
-    # print(TooLowGear4.collision([x4,y4]))
-    print(Mode4.get_enveloppe([x4,y4],None,None))
+global_etat = Etat(2000, 100, 2000, 2000, 300, 3.5, 60,0,"UP","LANDING")
+print(test_mode(global_etat))
 
-    #Mode 5
-    x5 = Etat.GlideSlopeDeviation# dots
-    y5 = Etat.RadioAltitude # ft
-    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],"Approach")
-    # print(GlideSlopeReduced5.collision([x5,y5]))
-    # print(GlideSlope5.collision([x5,y5]))
-    print(Mode5.get_enveloppe([x5,y5],None,None))
 
-    #Mode 6
+if __name__ == '__main__':
+    #parse
+    usage = "usage: %prog [options]"
+    parser = OptionParser(usage=usage)
+    parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
+    parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                      help='Be verbose.')
+    parser.add_option('-i', '--interval', type='int', dest='interval',
+                      help='Interval between messages (in seconds)')
+    parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
+                      help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
+    parser.add_option('-a', '--appname', type='string', dest='app_name',
+                      help='Application Name')
+    (options, args) = parser.parse_args()
 
-    Mode6 = Mode([ExRollAngle6],0)
-    x6 = Etat.RollAngle # degrees
-    y6 = Etat.HeightAboveTerrain # ft
-    # print(ExRollAngle6.collision([x6,y6]))
-    print(Mode6.get_enveloppe([x6,y6],None,None))
-    ExRollAngle6.play_sound()
+    # init log
+    level = logging.INFO
+    if options.verbose: # update logging level
+        level = logging.DEBUG
+    logger.setLevel(level)
 
-test_mode(Etat0)
+    #### IVY ####
+    def on_cx_proc(agent, connected):
+        if connected == IvyApplicationDisconnected:
+            logger.error('Ivy application %r was disconnected', agent)
+        else:
+            logger.info('Ivy application %r was connected', agent)
+
+
+    def on_die_proc(agent, _id):
+        logger.info('received the order to die from %r with id = %d', agent, _id)
+
+
+    def connect(app_name, ivy_bus):
+        IvyInit(app_name,                   # application name for Ivy
+                "[%s ready]" % app_name,    # ready message
+                0,                          # main loop is local (ie. using IvyMainloop)
+                on_cx_proc,                 # handler called on connection/disconnection
+                on_die_proc)
+        IvyStart(ivy_bus)
+
+    def on_time(agent, *larg):
+        logger.info("Receive time : %s" % larg[0])
+        print ("t=", larg[0])
+
+    def on_radioalt(agent, *larg):
+        z = larg[0]
+        logger.info("Receive radio allitude : %s" % z)
+        global_etat.change_radio_alt(z)
+
+    def on_statevector(agent, *larg):
+        pass
+
+    connect(options.app_name, options.ivy_bus)
+    IvyBindMsg(on_time, '^Time t=(\S+)')
+    IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
+IvyMainLoop()
