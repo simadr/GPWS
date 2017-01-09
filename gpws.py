@@ -94,6 +94,8 @@ class Etat():
         self.flaps = flaps
         self.gear = gear
         self.phase = phase
+        self.da = 0
+        self.dh = 0
 
     def get_VerticalSpeed(self):
         return self.list[VZ]
@@ -155,9 +157,19 @@ class Etat():
 
     def change_fmsinfo(self, phase, da, dh):
         self.phase = phase
+        self.da = da
+        self.dh = dh
 
     def __repr__(self):
-        return "Radio_alt = {}".format(self.list[RADIOALT])
+        to_print = ""
+        to_print +=  "Vertical speed = {}".format(self.get_VerticalSpeed())
+        to_print +=  "Radio_alt = {}".format(self.get_RadioAltitude())
+        to_print +=  "Terrain closure rate = {}".format(self.get_TerrainClosureRate)
+        to_print +=  "MSl altitude loss = {}".format(self.get_MSLAltitudeLoss)
+        to_print +=  "Computed airspeed = {}".format(self.get_ComputedAirSpeed())
+        to_print +=  "GlideslopeDeviation = {}".format(self.get_GlideSlopeDeviation())
+        to_print +=  "Roll angle = {}".format(self.get_RollAngle())
+        return to_print
 
 def Creation_Modes():
 
@@ -264,11 +276,15 @@ if __name__ == '__main__':
         global_etat.change_state(x, y, z, vp, fpa, psi, phi)
 
     def on_fms(agent, *larg):
-        pass
+        phase = larg[0]
+        da = larg[1]
+        dh = larg[2]
+        global_etat.change_fmsinfo(phase, da, dh)
 
 
     connect(options.app_name, options.ivy_bus)
     IvyBindMsg(on_time, '^Time t=(\S+)')
     IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
     IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
+    IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
     IvyMainLoop()
