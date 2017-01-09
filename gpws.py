@@ -211,7 +211,6 @@ def test_mode(Etat):
     return (L[-1] if len(L)!=0 else [])
 
 
-
 global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
 print(test_mode(global_etat))
 
