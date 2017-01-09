@@ -139,9 +139,13 @@ if options.verbose: # update logging level
 logger.setLevel(level)
 
 #Msg send
-def send_config():
+def send_config(agent=None, *larg):
     (gear, flaps) = ui.getConfig()
     IvySendMsg('Config GEAR={0} FLAPS={1}'.format(gear, flaps))
+
+
+ui.verticalSlider.valueChanged.connect(send_config)
+ui.gear_up.toggled.connect(send_config)
 
 #ivy connection
 def on_cx_proc(agent, connected):
@@ -164,10 +168,6 @@ def connect(app_name, ivy_bus):
             on_die_proc)
     IvyStart(ivy_bus)
 
-ui.verticalSlider.valueChanged.connect(send_config)
-ui.gear_up.toggled.connect(send_config)
-
-
 connect(options.app_name, options.ivy_bus)
+IvyBindMsg(send_config, '^Time t=(\S+)')
 sys.exit(app.exec_())
-
