@@ -3,6 +3,11 @@ from matplotlib.patches import Polygon, Circle
 from matplotlib.collections import PatchCollection
 import gpws
 
+from ivy.std_api import *
+import sys, logging
+logger = logging.getLogger('Ivy')
+from optparse import OptionParser
+
 def ftmin_to_ms(vz):
     return 0.00508*vz
 
@@ -112,3 +117,68 @@ def create_test(mode, gamma, absi, absf, ordi, ordf, nb_points, filename):
 create_testMode1(ftmin_to_ms(-1500), ftmin_to_ms(-6225), ft_to_m(2500), ft_to_m(370), 10, "toto.txt")
 create_test(gpws.Mode1, -3*math.pi/180, -1500, -6225, 2500, 370, 10, "test_mode1.txt")
 create_test(gpws.Mode4, -10*math.pi/180, 100, 300, 1000, 245, 10, "test_mode4.txt")
+
+#parse
+usage = "usage: %prog [options]"
+parser = OptionParser(usage=usage)
+parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="Test")
+parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                  help='Be verbose.')
+parser.add_option('-i', '--interval', type='int', dest='interval',
+                  help='Interval between messages (in seconds)')
+parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
+                  help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
+parser.add_option('-a', '--appname', type='string', dest='app_name',
+                  help='Application Name')
+(options, args) = parser.parse_args()
+
+# init log
+level = logging.INFO
+if options.verbose: # update logging level
+    level = logging.DEBUG
+logger.setLevel(level)
+
+
+#Msg send
+# def send_fic_test(nom_fichier_test):
+#     import time
+#     time.sleep(0.2)
+#     with open(nom_fichier_test, "r") as fic:
+#         for line in fic.readlines():
+#            IvySendMsg(line)
+
+def start_test(nom_fichier_test):
+    IvyBindMsg(send_fic_test(nom_fichier_test), "^Time t=")
+
+def send_fic_test(nom_fichier_test):
+    import time
+    time.sleep(0.2)
+    with open(nom_fichier_test, "r") as fic:
+        for line in fic.readlines():
+            IvySendMsg(line)
+            time.sleep(1)
+
+
+#ivy connection
+def on_cx_proc(agent, connected):
+    if connected == IvyApplicationDisconnected:
+        logger.error('Ivy application %r was disconnected', agent)
+    else:
+        logger.info('Ivy application %r was connected', agent)
+
+
+def on_die_proc(agent, _id):
+    logger.info('received the order to die from %r with id = %d', agent, _id)
+
+
+def connect(app_name, ivy_bus):
+    IvyInit(app_name,                   # application name for Ivy
+            "[%s ready]" % app_name,    # ready message
+            0,                          # main loop is local (ie. using IvyMainloop)
+            on_cx_proc,                 # handler called on connection/disconnection
+            on_die_proc)
+    IvyStart(ivy_bus)
+
+connect(options.app_name, options.ivy_bus)
+
+start_test("test_mode1.txt")
