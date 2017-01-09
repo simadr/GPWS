@@ -1,4 +1,4 @@
-from ivy.std_api import *
+# from ivy.std_api import *
 import sys, logging, math
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
@@ -52,7 +52,7 @@ class Enveloppe():
         return True
 
     def have_inside(self, point, flaps, gear):
-        if (flaps not in self.flaps and self.flaps[0] != 0) or (gear not in self.gear and self.flaps[0] !=0): # Si la config n'est pas bonne
+        if (flaps not in self.flaps and self.flaps[0] != None) or (gear not in self.gear and self.gear[0] !=None): # Si la config n'est pas bonne
             return False
         else:
             return self.collision(point)
@@ -86,7 +86,7 @@ class Mode():
         else:
             key_sort = lambda env : env.priority
             enveloppe_eff.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
-            return enveloppe_eff[0]
+            return enveloppe_eff[-1]
 
 class Etat():
     def __init__(self,VerticalSpeed,RadioAltitude,TerrainClosureRate,MSLAltitudeLoss,ComputedAirSpeed,GlideSlopeDeviation,RollAngle,flaps,gear,phase):
@@ -201,90 +201,90 @@ def test_mode(Etat):
     gear = Etat.gear
     L = []
     for Mode in L_Modes:
-        if Etat.phase in Mode.phase:
+        if Etat.phase in Mode.phase or Mode.phase[0] == None:
             x,y = Etat.get_xy(Mode)
             L.append(Mode.get_enveloppe([x,y],flaps,gear))
-
     L = [e for e in L if e!= None]
     key_sort = lambda env : env.priority
     L.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
-    return (L[0] if len(L)!=0 else [])
+    print(L[-1].priority)
+    return (L[-1] if len(L)!=0 else [])
 
 
-global_etat = Etat(2000, 100, 2000, 2000, 300, 3.5, 60,0,"UP","LANDING")
+
+global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
 print(test_mode(global_etat))
 
-
-if __name__ == '__main__':
-    #parse
-    usage = "usage: %prog [options]"
-    parser = OptionParser(usage=usage)
-    parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
-    parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
-                      help='Be verbose.')
-    parser.add_option('-i', '--interval', type='int', dest='interval',
-                      help='Interval between messages (in seconds)')
-    parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
-                      help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
-    parser.add_option('-a', '--appname', type='string', dest='app_name',
-                      help='Application Name')
-    (options, args) = parser.parse_args()
-
-    # init log
-    level = logging.INFO
-    if options.verbose: # update logging level
-        level = logging.DEBUG
-    logger.setLevel(level)
-
-    #### IVY ####
-    def on_cx_proc(agent, connected):
-        if connected == IvyApplicationDisconnected:
-            logger.error('Ivy application %r was disconnected', agent)
-        else:
-            logger.info('Ivy application %r was connected', agent)
-
-
-    def on_die_proc(agent, _id):
-        logger.info('received the order to die from %r with id = %d', agent, _id)
-
-
-    def connect(app_name, ivy_bus):
-        IvyInit(app_name,                   # application name for Ivy
-                "[%s ready]" % app_name,    # ready message
-                0,                          # main loop is local (ie. using IvyMainloop)
-                on_cx_proc,                 # handler called on connection/disconnection
-                on_die_proc)
-        IvyStart(ivy_bus)
-
-    def on_time(agent, *larg):
-        logger.info("Receive time : %s" % larg[0])
-        print ("t=", larg[0])
-
-    def on_radioalt(agent, *larg):
-        z = larg[0]
-        logger.info("Receive radio altitude : %s" % z)
-        global_etat.change_radio_alt(z)
-
-    def on_statevector(agent, *larg):
-        x = larg[0]
-        y = larg[1]
-        z = larg[2]
-        vp = larg[3]
-        fpa = larg[4]
-        psi = larg[5]
-        phi = larg[6]
-        global_etat.change_state(x, y, z, vp, fpa, psi, phi)
-
-    def on_fms(agent, *larg):
-        phase = larg[0]
-        da = larg[1]
-        dh = larg[2]
-        global_etat.change_fmsinfo(phase, da, dh)
-
-
-    connect(options.app_name, options.ivy_bus)
-    IvyBindMsg(on_time, '^Time t=(\S+)')
-    IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
-    IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
-    IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
-    IvyMainLoop()
+# if __name__ == '__main__':
+#     #parse
+#     usage = "usage: %prog [options]"
+#     parser = OptionParser(usage=usage)
+#     parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
+#     parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+#                       help='Be verbose.')
+#     parser.add_option('-i', '--interval', type='int', dest='interval',
+#                       help='Interval between messages (in seconds)')
+#     parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
+#                       help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
+#     parser.add_option('-a', '--appname', type='string', dest='app_name',
+#                       help='Application Name')
+#     (options, args) = parser.parse_args()
+#
+#     # init log
+#     level = logging.INFO
+#     if options.verbose: # update logging level
+#         level = logging.DEBUG
+#     logger.setLevel(level)
+#
+#     #### IVY ####
+#     def on_cx_proc(agent, connected):
+#         if connected == IvyApplicationDisconnected:
+#             logger.error('Ivy application %r was disconnected', agent)
+#         else:
+#             logger.info('Ivy application %r was connected', agent)
+#
+#
+#     def on_die_proc(agent, _id):
+#         logger.info('received the order to die from %r with id = %d', agent, _id)
+#
+#
+#     def connect(app_name, ivy_bus):
+#         IvyInit(app_name,                   # application name for Ivy
+#                 "[%s ready]" % app_name,    # ready message
+#                 0,                          # main loop is local (ie. using IvyMainloop)
+#                 on_cx_proc,                 # handler called on connection/disconnection
+#                 on_die_proc)
+#         IvyStart(ivy_bus)
+#
+#     def on_time(agent, *larg):
+#         logger.info("Receive time : %s" % larg[0])
+#         print ("t=", larg[0])
+#
+#     def on_radioalt(agent, *larg):
+#         z = larg[0]
+#         logger.info("Receive radio altitude : %s" % z)
+#         global_etat.change_radio_alt(z)
+#
+#     def on_statevector(agent, *larg):
+#         x = larg[0]
+#         y = larg[1]
+#         z = larg[2]
+#         vp = larg[3]
+#         fpa = larg[4]
+#         psi = larg[5]
+#         phi = larg[6]
+#         global_etat.change_state(x, y, z, vp, fpa, psi, phi)
+#
+#     def on_fms(agent, *larg):
+#         phase = larg[0]
+#         da = larg[1]
+#         dh = larg[2]
+#         global_etat.change_fmsinfo(phase, da, dh)
+#
+#
+#     connect(options.app_name, options.ivy_bus)
+#     IvyBindMsg(on_time, '^Time t=(\S+)')
+#     IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
+#     IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
+#     IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
+#     IvyMainLoop()
