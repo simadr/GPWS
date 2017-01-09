@@ -71,7 +71,7 @@ def create_testMode1(vzi, vzf, ralti, raltf, nb_points, filename):
     psi=0
     phi=0
     pas_vz = (vzf - vzi) / nb_points
-    pas_ralt = (ralti - raltf) / nb_points
+    pas_ralt = (raltf - ralti) / nb_points
     vz = vzi
     ralt = ralti
     fic = open(filename, "w")
@@ -87,8 +87,30 @@ def create_testMode1(vzi, vzf, ralti, raltf, nb_points, filename):
         ralt += pas_ralt
     fic.close()
 
-traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
-mode = gpws.Mode1
-plot_trajectory(traj,mode, 1, 1)
+def create_test(mode, gamma, absi, absf, ordi, ordf, nb_points, filename):
+    """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
+    etat = gpws.Etat(0,0,0,0,0,0,0)
+    pas_abs = (absf - absi) / nb_points
+    pas_ord = (ordf - ordi) / nb_points
+    abs = absi
+    ord = ordi
+    fic = open(filename, "w")
+    for i in range(nb_points):
+        etat.set_xy(abs, ord, mode)
+        time = "Time t={}\n".format(i)
+        radio_alt =  etat.generate_radioalt()
+        statevector = etat.generate_statevector(gamma)
+        fic.write(time)
+        fic.write(radio_alt)
+        fic.write(statevector)
+        abs += pas_abs
+        ord += pas_ord
+    fic.close()
 
-#create_testMode1(ftmin_to_ms(-1500), ftmin_to_ms(-6225), ft_to_m(2500), ft_to_m(370), 10, "test_mode1.txt")
+# traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
+# mode = gpws.Mode1
+# plot_trajectory(traj,mode, 1, 1)
+
+create_testMode1(ftmin_to_ms(-1500), ftmin_to_ms(-6225), ft_to_m(2500), ft_to_m(370), 10, "toto.txt")
+create_test(gpws.Mode1, -3*math.pi/180, -1500, -6225, 2500, 370, 10, "test_mode1.txt")
+create_test(gpws.Mode4, -10*math.pi/180, 100, 300, 1000, 245, 10, "test_mode4.txt")
