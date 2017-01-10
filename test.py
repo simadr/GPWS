@@ -22,6 +22,7 @@ def plot_mode(mode, fig=None, ax=None):
     if fig == None or ax==None:
         fig, ax = plt.subplots()
     patches = []
+
     for env in mode.list_enveloppes:
         polygon = Polygon(env.vertexes, True)
         patches.append(polygon)
@@ -69,6 +70,25 @@ def plot_trajectory(traj, mode, flaps, gear):
     plt.show()
 
 
+def segm_test_diag(mode):
+    """Cree un segment de test sur la 'diagonale'  du mode"""
+    xmin = xmax = mode.list_enveloppes[0].vertexes[0][0]
+    ymin = ymax = mode.list_enveloppes[0].vertexes[0][1]
+    for env in mode.list_enveloppes:
+        for (x, y) in env.vertexes:
+            if x < xmin:
+                xmin = x
+            elif x > xmax:
+                xmax = x
+            if y < ymin:
+                ymin = y
+            elif y > ymax:
+                ymax = y
+    x_initial = xmin - (xmax -xmin) * 0.2
+    y_inital = ymax + (ymax - ymin) * 0.2
+    x_final = xmax - 0.1 *  (xmax - xmin)
+    y_final = ymin + 0.1 * (ymax - ymin)
+    return x_initial, y_inital, x_final, y_final
 
 def create_test(mode, phase, flaps, gear,  gamma, absi, absf, ordi, ordf, nb_points, filename):
     """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
@@ -98,11 +118,16 @@ def create_test(mode, phase, flaps, gear,  gamma, absi, absf, ordi, ordf, nb_poi
     fic.close()
     plot_trajectory(traj, mode, flaps, gear)
 
+
+
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
 # plot_trajectory(traj,mode, 1, 1)
-
-create_test(gpws.L_Modes[0], 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
+mode = gpws.L_Modes[5]
+mode.enable()
+xi, yi, xf, yf = segm_test_diag(mode)
+# create_test(mode1, 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
+create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt")
 
 #parse
 usage = "usage: %prog [options]"
@@ -158,6 +183,6 @@ def connect(app_name, ivy_bus):
             on_die_proc)
     IvyStart(ivy_bus)
 
-connect(options.app_name, options.ivy_bus)
-
-start_test("test_mode1.txt")
+# connect(options.app_name, options.ivy_bus)
+#
+# start_test("test_mode1.txt")

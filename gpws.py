@@ -21,6 +21,16 @@ COMPUTED_AIR_SPEED = 4
 GLIDE_SLOPE_DEVIATION = 5
 ROLL_ANGLE = 6
 
+#Gear
+DOWN = "Down"
+UP = "Up"
+
+#Phase
+APP = "APPROACH"
+CLIMB = "CLIMB"
+TO  = "TAKE-OFF"
+LDG = "LANDING"
+
 class Enveloppe():
     def __init__(self, vertexes, alertlevel, priority, flaps, gear, name, sound):
         self.vertexes = vertexes
@@ -52,7 +62,7 @@ class Enveloppe():
         return True
 
     def have_inside(self, point, flaps, gear):
-        if (flaps not in self.flaps and self.flaps[0] != None) or (gear not in self.gear and self.gear[0] !=None): # Si la config n'est pas bonne
+        if (flaps not in self.flaps and self.flaps[0] != None) or (gear not in self.gear and self.gear[0] != None): # Si la config n'est pas bonne
             return False
         else:
             return self.collision(point)
@@ -217,17 +227,18 @@ def Creation_Modes():
     DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None], "Don't sink", "sons/ndontsink.wav")
     TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None], "Too low terrain", "sons/TooLowTerrain.wav")
     TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None], "Too low flaps", "sons/nabtoolowflaps.wav")
-    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],["UP"], "Too low gear", "sons/nabtoolowgear.wav")
-    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],"DOWN", "GLIDESLOPE", "sons/nabglideslope2.wav")
-    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',18.5,[None],["DOWN"],"Glideslope (reduced)", "sons/nabglideslope.wav")
-    ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
+    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],[UP], "Too low gear", "sons/nabtoolowgear.wav")
+    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],[DOWN], "GLIDESLOPE", "sons/nabglideslope2.wav")
+    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',19.5,[None],[DOWN],"Glideslope (reduced)", "sons/nabglideslope.wav")
+    ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[180,500],[180,0], [10, 0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
+
 
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
     Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT)
-    Mode3 = Mode([DontSink3],["CLIMB"],MSL_ALT_LOSS,RADIOALT)
+    Mode3 = Mode([DontSink3],[CLIMB],MSL_ALT_LOSS,RADIOALT)
     Mode3.disable()
-    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],["APPROACH","LANDING","TAKE-OFF"],COMPUTED_AIR_SPEED,RADIOALT)
-    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],["APPROACH"],GLIDE_SLOPE_DEVIATION,RADIOALT)
+    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],[APP,LDG,TO],COMPUTED_AIR_SPEED,RADIOALT)
+    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT)
     Mode5.disable()
     Mode6 = Mode([ExRollAngle6],[None],ROLL_ANGLE,RADIOALT)
 
