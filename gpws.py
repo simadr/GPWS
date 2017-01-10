@@ -151,15 +151,25 @@ class Etat():
         phi = self.get_RollAngle()
         return "StateVector x={0} y={1} z={2} Vp={3} fpa={4} psi={5} phi={6}\n".format(x, y, z, vp, fpa, psi, phi)
 
+    def generate_fms(self):
+        """ Pour les tests uniquement """
+        return "FMS_TO_GPWS PHASE={0} DA={1} DH={2}\n".format(self.phase, self.da, self.dh)
+
+    def generate_config(self):
+        """ Pour les tests uniquement """
+        return "Config GEAR={} FLAPS={}\n".format(self.gear, self.flaps)
+
     def get_xy(self, mode):
-        return (self.list[mode.abs], self.list[mode.ord])
+        x = self.list[mode.abs] if mode.abs != VZ else -self.list[mode.abs]
+        y = self.list[mode.ord]
+        return (x, y)
 
     def set_xy(self, x, y, mode, gamma=0):
         """  Modifie l'etat de sorte qu'il se trouve aux coord (x,y) dans le mode passe en param  """
         self.list[mode.abs] = x
         self.list[mode.ord] = y
         if mode.abs == VZ and gamma != 0:  #si on change la vz, on change la vp
-            self.list[COMPUTED_AIR_SPEED]  = x/math.sin(gamma)
+            self.list[COMPUTED_AIR_SPEED]  =  x/math.sin(gamma)
         elif mode.abs == COMPUTED_AIR_SPEED:
             self.list[VZ] = self.get_ComputedAirSpeed() * math.sin(gamma)
 
@@ -172,7 +182,7 @@ class Etat():
 
     def change_state(self, x, y, z, vp, fpa, psi, phi):
         self.list[COMPUTED_AIR_SPEED] = vp * 1.94384 #conversion ms to kts
-        self.list[VZ] = (math.sin(fpa) * vp) * 196.85 #conversion m/s to ft/min
+        self.list[VZ] =  - (math.sin(fpa) * vp) * 196.85 #conversion m/s to - ft/min
         self.list[ROLL_ANGLE] = math.degrees(phi)
 
     def change_fmsinfo(self, phase, da, dh):
@@ -215,6 +225,7 @@ def Creation_Modes():
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
     Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT)
     Mode3 = Mode([DontSink3],["CLIMB"],MSL_ALT_LOSS,RADIOALT)
+    Mode3.disable()
     Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],["APPROACH","LANDING","TAKE-OFF"],COMPUTED_AIR_SPEED,RADIOALT)
     Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],["APPROACH"],GLIDE_SLOPE_DEVIATION,RADIOALT)
     Mode5.disable()
@@ -236,13 +247,11 @@ def test_mode(Etat):
     L = [e for e in L if e!= None]
     key_sort = lambda env : env.priority
     L.sort(key=key_sort) #On trie selon la plus petite prioritee
-    print(L[0].priority)
-    return (L[0] if len(L)!=0 else [])
+    return (L[0] if len(L)!=0 else None)
 
 
 ## Variables globals
 global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
-print(test_mode(global_etat))
 
 
 if __name__ == '__main__':
@@ -287,9 +296,10 @@ if __name__ == '__main__':
         IvyStart(ivy_bus)
 
     def on_time(agent, *larg):
-        logger.info("Receive time : %s" % larg[0])
         if global_etat.is_init():
-            print("GPWS OK")
+            env = test_mode(global_etat)
+            if env != None:
+                env.play_sound()
         else:
             print("GPWS NOT INITIALIZED")
         print global_etat

@@ -68,55 +68,41 @@ def plot_trajectory(traj, mode, flaps, gear):
     plt.autoscale()
     plt.show()
 
-def create_testMode1(vzi, vzf, ralti, raltf, nb_points, filename):
-    x=0
-    y=0
-    z=0
-    fpa = -3*math.pi/180
-    psi=0
-    phi=0
-    pas_vz = (vzf - vzi) / nb_points
-    pas_ralt = (raltf - ralti) / nb_points
-    vz = vzi
-    ralt = ralti
-    fic = open(filename, "w")
-    for i in range(nb_points):
-        time = "Time t={}\n".format(i)
-        radio_alt =  "RadioAltimeter groundAlt={}\n".format(ralt)
-        vp = vz/math.sin(fpa)
-        statevector = "StateVector x={0} y={1} z={2} Vp={3} fpa={4} psi={5} phi={6}\n".format(x, y, z, vp, fpa, psi, phi)
-        fic.write(time)
-        fic.write(radio_alt)
-        fic.write(statevector)
-        vz += pas_vz
-        ralt += pas_ralt
-    fic.close()
 
-def create_test(mode, gamma, absi, absf, ordi, ordf, nb_points, filename):
+
+def create_test(mode, phase, flaps, gear,  gamma, absi, absf, ordi, ordf, nb_points, filename):
     """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
-    etat = gpws.Etat(0,5000,0,0,0,0,0)
+    etat = gpws.Etat(0, 5000, 0, 0, 0, 0, 0, flaps, gear, phase)
     pas_abs = (absf - absi) / nb_points
     pas_ord = (ordf - ordi) / nb_points
     abs = absi
     ord = ordi
+    traj = []
     fic = open(filename, "w")
     for i in range(nb_points):
         etat.set_xy(abs, ord, mode)
+        time = "Time t={}\n".format(i)
         radio_alt =  etat.generate_radioalt()
         statevector = etat.generate_statevector(gamma)
+        fms = etat.generate_fms()
+        config = etat.generate_config()
+        fic.write(time)
         fic.write(radio_alt)
         fic.write(statevector)
+        fic.write(fms)
+        fic.write(config)
+        traj.append((abs, ord))
         abs += pas_abs
         ord += pas_ord
+    fic.write("Time t={}\n".format(nb_points))
     fic.close()
+    plot_trajectory(traj, mode, flaps, gear)
 
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
 # plot_trajectory(traj,mode, 1, 1)
 
-create_testMode1(ftmin_to_ms(-1500), ftmin_to_ms(-6225), ft_to_m(2500), ft_to_m(370), 10, "toto.txt")
-create_test(gpws.Mode1, -3*math.pi/180, -1500, -6225, 2500, 370, 10, "test_mode1.txt")
-create_test(gpws.Mode4, -10*math.pi/180, 100, 300, 1000, 245, 10, "test_mode4.txt")
+create_test(gpws.L_Modes[0], 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
 
 #parse
 usage = "usage: %prog [options]"
@@ -139,13 +125,6 @@ if options.verbose: # update logging level
 logger.setLevel(level)
 
 
-#Msg send
-# def send_fic_test(nom_fichier_test):
-#     import time
-#     time.sleep(0.2)
-#     with open(nom_fichier_test, "r") as fic:
-#         for line in fic.readlines():
-#            IvySendMsg(line)
 
 def start_test(nom_fichier_test):
     IvyBindMsg(send_fic_test(nom_fichier_test), "^Time t=")
@@ -156,7 +135,7 @@ def send_fic_test(nom_fichier_test):
     with open(nom_fichier_test, "r") as fic:
         for line in fic.readlines():
             IvySendMsg(line)
-            time.sleep(1)
+            time.sleep(0.5)
 
 
 #ivy connection
