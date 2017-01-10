@@ -70,6 +70,7 @@ class Enveloppe():
 
     def __repr__(self):
         return self.name
+
 class Mode():
     def __init__(self, list_enveloppes,phase,abs,ord):
         self.list_enveloppes = list_enveloppes
@@ -90,6 +91,11 @@ class Mode():
             enveloppe_eff.sort(key=key_sort) #On trie selon la plus petite prioritee
             return enveloppe_eff[0]
 
+    def disable(self):
+        self.on = False
+
+    def enable(self):
+        self.on = True
 
 class Etat():
     def __init__(self,VerticalSpeed,RadioAltitude,TerrainClosureRate,MSLAltitudeLoss,ComputedAirSpeed,GlideSlopeDeviation,RollAngle,flaps,gear,phase):
@@ -99,11 +105,13 @@ class Etat():
         self.phase = phase
         self.da = 0
         self.dh = 0
+
         # Attribut permettant de savoir si l'etat est correctement initialise
         self.init_ralt = False
         self.init_state = False
         self.init_fms = False
         self.init_config = False
+
 
     def get_VerticalSpeed(self):
         return self.list[VZ]
@@ -127,6 +135,7 @@ class Etat():
         return self.list[ROLL_ANGLE]
 
     def generate_radioalt(self):
+        """ Pour les tests uniquement """
         return "RadioAltimeter groundAlt={}\n".format(self.list[RADIOALT] * 0.3048)
 
     def generate_statevector(self, gamma):
@@ -156,6 +165,9 @@ class Etat():
 
 
     def change_radio_alt(self, z):
+        z = z / 0.3048 #conversion m to ft
+        if global_etat.init_ralt: #On met a jour le terrain closure rate si possible
+            self.list[TERRAIN_CLOSURE_RATE] = self.get_RadioAltitude() - z
         self.list[RADIOALT] = z
 
     def change_state(self, x, y, z, vp, fpa, psi, phi):
@@ -177,13 +189,13 @@ class Etat():
 
     def __repr__(self):
         to_print = ""
-        to_print +=  "Vertical speed = {}".format(self.get_VerticalSpeed())
-        to_print +=  "Radio_alt = {}".format(self.get_RadioAltitude())
-        to_print +=  "Terrain closure rate = {}".format(self.get_TerrainClosureRate)
-        to_print +=  "MSl altitude loss = {}".format(self.get_MSLAltitudeLoss)
-        to_print +=  "Computed airspeed = {}".format(self.get_ComputedAirSpeed())
-        to_print +=  "GlideslopeDeviation = {}".format(self.get_GlideSlopeDeviation())
-        to_print +=  "Roll angle = {}".format(self.get_RollAngle())
+        to_print +=  "Vertical speed = {}\n".format(self.get_VerticalSpeed())
+        to_print +=  "Radio_alt = {}\n".format(self.get_RadioAltitude())
+        to_print +=  "Terrain closure rate = {}\n".format(self.get_TerrainClosureRate())
+        to_print +=  "MSl altitude loss = {}\n".format(self.get_MSLAltitudeLoss())
+        to_print +=  "Computed airspeed = {}\n".format(self.get_ComputedAirSpeed())
+        to_print +=  "GlideslopeDeviation = {}\n".format(self.get_GlideSlopeDeviation())
+        to_print +=  "Roll angle = {}\n".format(self.get_RollAngle())
         return to_print
 
 def Creation_Modes():
@@ -205,6 +217,7 @@ def Creation_Modes():
     Mode3 = Mode([DontSink3],["CLIMB"],MSL_ALT_LOSS,RADIOALT)
     Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],["APPROACH","LANDING","TAKE-OFF"],COMPUTED_AIR_SPEED,RADIOALT)
     Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],["APPROACH"],GLIDE_SLOPE_DEVIATION,RADIOALT)
+    Mode5.disable()
     Mode6 = Mode([ExRollAngle6],[None],ROLL_ANGLE,RADIOALT)
 
     return [Mode1,Mode2,Mode3,Mode4,Mode5,Mode6]
@@ -212,16 +225,17 @@ def Creation_Modes():
 L_Modes = Creation_Modes()
 
 def test_mode(Etat):
+    active_mode = [mode for mode in L_Modes if mode.on]
     flaps = Etat.flaps
     gear = Etat.gear
     L = []
-    for Mode in L_Modes:
+    for Mode in active_mode:
         if Etat.phase in Mode.phase or Mode.phase[0] == None:
             x,y = Etat.get_xy(Mode)
             L.append(Mode.get_enveloppe([x,y],flaps,gear))
     L = [e for e in L if e!= None]
     key_sort = lambda env : env.priority
-    L.sort(key=key_sort) #On trie selon la plus grande prioritee
+    L.sort(key=key_sort) #On trie selon la plus petite prioritee
     print(L[0].priority)
     return (L[0] if len(L)!=0 else [])
 
@@ -229,7 +243,6 @@ def test_mode(Etat):
 ## Variables globals
 global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
 print(test_mode(global_etat))
-
 
 
 if __name__ == '__main__':
@@ -279,6 +292,7 @@ if __name__ == '__main__':
             print("GPWS OK")
         else:
             print("GPWS NOT INITIALIZED")
+        print global_etat
 
 
     def on_radioalt(agent, *larg):
