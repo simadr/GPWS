@@ -1,4 +1,4 @@
-# from ivy.std_api import *
+from ivy.std_api import *
 import sys, logging, math
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
@@ -22,14 +22,14 @@ GLIDE_SLOPE_DEVIATION = 5
 ROLL_ANGLE = 6
 
 class Enveloppe():
-    def __init__(self, vertexes, alertlevel, priority, flaps, gear):
+    def __init__(self, vertexes, alertlevel, priority, flaps, gear, name, sound):
         self.vertexes = vertexes
         self.alertlevel = alertlevel
         self.priority = priority
         self.flaps = flaps
         self.gear = gear
-        self.sound = "sons/abn2500.wav" # to change
-        self.name = "Nom" #to change
+        self.sound = sound
+        self.name = name
 
     def collision(self,P):
         graphe = self.vertexes
@@ -68,6 +68,8 @@ class Enveloppe():
         else:
             print("Lecture de ", self.sound)
 
+    def __repr__(self):
+        return self.name
 class Mode():
     def __init__(self, list_enveloppes,phase,abs,ord):
         self.list_enveloppes = list_enveloppes
@@ -85,8 +87,9 @@ class Mode():
             return None #Le point n'est dans aucune enveloppe
         else:
             key_sort = lambda env : env.priority
-            enveloppe_eff.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
-            return enveloppe_eff[-1]
+            enveloppe_eff.sort(key=key_sort) #On trie selon la plus petite prioritee
+            return enveloppe_eff[0]
+
 
 class Etat():
     def __init__(self,VerticalSpeed,RadioAltitude,TerrainClosureRate,MSLAltitudeLoss,ComputedAirSpeed,GlideSlopeDeviation,RollAngle,flaps,gear,phase):
@@ -173,17 +176,17 @@ class Etat():
 
 def Creation_Modes():
 
-    PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],'W',2,[None],[None])
-    SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],'C',17,[None],[None])
-    PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],'W',3,[None],[None])
-    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,[None],[None])
-    DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None])
-    TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None])
-    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None])
-    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],["UP"])
-    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],"DOWN")
-    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',18.5,[None],["DOWN"])
-    ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],'C',22,[None],[None])
+    PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],'W',2,[None],[None], "Pullup", "sons/nabpullup.wav")
+    SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],'C',17,[None],[None], "Sink rate", "sons/nabsinkrate.wav")
+    PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],'W',3,[None],[None], "terrain Pull up", "sons/nabterrainaheadpullup.wav")
+    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,[None],[None], "Terrain", "sons/nabglideslope2.wav")
+    DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None], "Don't sink", "sons/ndontsink.wav")
+    TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None], "Too low terrain", "sons/TooLowTerrain.wav")
+    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None], "Too low flaps", "sons/nabtoolowflaps.wav")
+    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],["UP"], "Too low gear", "sons/nabtoolowgear.wav")
+    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],"DOWN", "GLIDESLOPE", "sons/nabglideslope2.wav")
+    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',18.5,[None],["DOWN"],"Glideslope (reduced)", "sons/nabglideslope.wav")
+    ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[90,500],[-90,500],[-40,500],[-40,150],[-10,30]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
 
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
     Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT)
@@ -206,84 +209,84 @@ def test_mode(Etat):
             L.append(Mode.get_enveloppe([x,y],flaps,gear))
     L = [e for e in L if e!= None]
     key_sort = lambda env : env.priority
-    L.sort(key=key_sort, reverse=True) #On trie selon la plus grande prioritee
-    print(L[-1].priority)
-    return (L[-1] if len(L)!=0 else [])
+    L.sort(key=key_sort) #On trie selon la plus grande prioritee
+    print(L[0].priority)
+    return (L[0] if len(L)!=0 else [])
 
 
 global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
 print(test_mode(global_etat))
 
-# if __name__ == '__main__':
-#     #parse
-#     usage = "usage: %prog [options]"
-#     parser = OptionParser(usage=usage)
-#     parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
-#     parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
-#                       help='Be verbose.')
-#     parser.add_option('-i', '--interval', type='int', dest='interval',
-#                       help='Interval between messages (in seconds)')
-#     parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
-#                       help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
-#     parser.add_option('-a', '--appname', type='string', dest='app_name',
-#                       help='Application Name')
-#     (options, args) = parser.parse_args()
-#
-#     # init log
-#     level = logging.INFO
-#     if options.verbose: # update logging level
-#         level = logging.DEBUG
-#     logger.setLevel(level)
-#
-#     #### IVY ####
-#     def on_cx_proc(agent, connected):
-#         if connected == IvyApplicationDisconnected:
-#             logger.error('Ivy application %r was disconnected', agent)
-#         else:
-#             logger.info('Ivy application %r was connected', agent)
-#
-#
-#     def on_die_proc(agent, _id):
-#         logger.info('received the order to die from %r with id = %d', agent, _id)
-#
-#
-#     def connect(app_name, ivy_bus):
-#         IvyInit(app_name,                   # application name for Ivy
-#                 "[%s ready]" % app_name,    # ready message
-#                 0,                          # main loop is local (ie. using IvyMainloop)
-#                 on_cx_proc,                 # handler called on connection/disconnection
-#                 on_die_proc)
-#         IvyStart(ivy_bus)
-#
-#     def on_time(agent, *larg):
-#         logger.info("Receive time : %s" % larg[0])
-#         print ("t=", larg[0])
-#
-#     def on_radioalt(agent, *larg):
-#         z = larg[0]
-#         logger.info("Receive radio altitude : %s" % z)
-#         global_etat.change_radio_alt(z)
-#
-#     def on_statevector(agent, *larg):
-#         x = larg[0]
-#         y = larg[1]
-#         z = larg[2]
-#         vp = larg[3]
-#         fpa = larg[4]
-#         psi = larg[5]
-#         phi = larg[6]
-#         global_etat.change_state(x, y, z, vp, fpa, psi, phi)
-#
-#     def on_fms(agent, *larg):
-#         phase = larg[0]
-#         da = larg[1]
-#         dh = larg[2]
-#         global_etat.change_fmsinfo(phase, da, dh)
-#
-#
-#     connect(options.app_name, options.ivy_bus)
-#     IvyBindMsg(on_time, '^Time t=(\S+)')
-#     IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
-#     IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
-#     IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
-#     IvyMainLoop()
+if __name__ == '__main__':
+    #parse
+    usage = "usage: %prog [options]"
+    parser = OptionParser(usage=usage)
+    parser.set_defaults(ivy_bus="127.255.255.255:2010", interval=5, verbose=False, app_name="GPWS")
+    parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                      help='Be verbose.')
+    parser.add_option('-i', '--interval', type='int', dest='interval',
+                      help='Interval between messages (in seconds)')
+    parser.add_option('-b', '--ivybus', type='string', dest='ivy_bus',
+                      help='Bus id (format @IP:port, default to 127.255.255.255:2010)')
+    parser.add_option('-a', '--appname', type='string', dest='app_name',
+                      help='Application Name')
+    (options, args) = parser.parse_args()
+
+    # init log
+    level = logging.INFO
+    if options.verbose: # update logging level
+        level = logging.DEBUG
+    logger.setLevel(level)
+
+    #### IVY ####
+    def on_cx_proc(agent, connected):
+        if connected == IvyApplicationDisconnected:
+            logger.error('Ivy application %r was disconnected', agent)
+        else:
+            logger.info('Ivy application %r was connected', agent)
+
+
+    def on_die_proc(agent, _id):
+        logger.info('received the order to die from %r with id = %d', agent, _id)
+
+
+    def connect(app_name, ivy_bus):
+        IvyInit(app_name,                   # application name for Ivy
+                "[%s ready]" % app_name,    # ready message
+                0,                          # main loop is local (ie. using IvyMainloop)
+                on_cx_proc,                 # handler called on connection/disconnection
+                on_die_proc)
+        IvyStart(ivy_bus)
+
+    def on_time(agent, *larg):
+        logger.info("Receive time : %s" % larg[0])
+        print ("t=", larg[0])
+
+    def on_radioalt(agent, *larg):
+        z = larg[0]
+        logger.info("Receive radio altitude : %s" % z)
+        global_etat.change_radio_alt(z)
+
+    def on_statevector(agent, *larg):
+        x = larg[0]
+        y = larg[1]
+        z = larg[2]
+        vp = larg[3]
+        fpa = larg[4]
+        psi = larg[5]
+        phi = larg[6]
+        global_etat.change_state(x, y, z, vp, fpa, psi, phi)
+
+    def on_fms(agent, *larg):
+        phase = larg[0]
+        da = larg[1]
+        dh = larg[2]
+        global_etat.change_fmsinfo(phase, da, dh)
+
+
+    connect(options.app_name, options.ivy_bus)
+    IvyBindMsg(on_time, '^Time t=(\S+)')
+    IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
+    IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
+    IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
+    IvyMainLoop()
