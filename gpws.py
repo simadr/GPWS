@@ -99,6 +99,11 @@ class Etat():
         self.phase = phase
         self.da = 0
         self.dh = 0
+        # Attribut permettant de savoir si l'etat est correctement initialise
+        self.init_ralt = False
+        self.init_state = False
+        self.init_fms = False
+        self.init_config = False
 
     def get_VerticalSpeed(self):
         return self.list[VZ]
@@ -154,14 +159,21 @@ class Etat():
         self.list[RADIOALT] = z
 
     def change_state(self, x, y, z, vp, fpa, psi, phi):
-        self.list[COMPUTED_AIR_SPEED] = vp  * 1,94384 #conversion ms to kts
-        self.list[VZ] = (math.sin(fpa) * vp) * 196,85 #conversion m/s to ft/min
+        self.list[COMPUTED_AIR_SPEED] = vp * 1.94384 #conversion ms to kts
+        self.list[VZ] = (math.sin(fpa) * vp) * 196.85 #conversion m/s to ft/min
         self.list[ROLL_ANGLE] = math.degrees(phi)
 
     def change_fmsinfo(self, phase, da, dh):
         self.phase = phase
         self.da = da
         self.dh = dh
+
+    def change_config(self, flaps, gear):
+        self.flaps = flaps
+        self.gear = gear
+
+    def is_init(self):
+        return self.init_config and self.init_fms and self.init_ralt and self.init_state
 
     def __repr__(self):
         to_print = ""
@@ -214,8 +226,11 @@ def test_mode(Etat):
     return (L[0] if len(L)!=0 else [])
 
 
+## Variables globals
 global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
 print(test_mode(global_etat))
+
+
 
 if __name__ == '__main__':
     #parse
@@ -260,28 +275,41 @@ if __name__ == '__main__':
 
     def on_time(agent, *larg):
         logger.info("Receive time : %s" % larg[0])
-        print ("t=", larg[0])
+        if global_etat.is_init():
+            print("GPWS OK")
+        else:
+            print("GPWS NOT INITIALIZED")
+
 
     def on_radioalt(agent, *larg):
-        z = larg[0]
+        z = float(larg[0])
         logger.info("Receive radio altitude : %s" % z)
         global_etat.change_radio_alt(z)
+        global_etat.init_ralt = True
 
     def on_statevector(agent, *larg):
-        x = larg[0]
-        y = larg[1]
-        z = larg[2]
-        vp = larg[3]
-        fpa = larg[4]
-        psi = larg[5]
-        phi = larg[6]
+        x = float(larg[0])
+        y = float(larg[1])
+        z = float(larg[2])
+        vp = float(larg[3])
+        fpa = float(larg[4])
+        psi = float(larg[5])
+        phi = float(larg[6])
         global_etat.change_state(x, y, z, vp, fpa, psi, phi)
+        global_etat.init_state = True
 
     def on_fms(agent, *larg):
         phase = larg[0]
-        da = larg[1]
-        dh = larg[2]
+        da = float(larg[1])
+        dh = float(larg[2])
         global_etat.change_fmsinfo(phase, da, dh)
+        global_etat.init_fms = True
+
+    def on_config(agent, *larg):
+        gear = larg[0]
+        flaps = larg[1]
+        global_etat.change_config(flaps, gear)
+        global_etat.init_config = True
 
 
     connect(options.app_name, options.ivy_bus)
@@ -289,4 +317,5 @@ if __name__ == '__main__':
     IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
     IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
     IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
+    IvyBindMsg(on_config, 'Config\s+GEAR=(\S+)\s+FLAPS=(\S+)')
     IvyMainLoop()
