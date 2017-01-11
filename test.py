@@ -100,7 +100,7 @@ def create_test(mode, phase, flaps, gear,  gamma, absi, absf, ordi, ordf, nb_poi
     traj = []
     fic = open(filename, "w")
     for i in range(nb_points):
-        etat.set_xy(abs, ord, mode)
+        etat.set_xy(abs, ord, mode, gamma)
         time = "Time t={}\n".format(i)
         radio_alt =  etat.generate_radioalt()
         statevector = etat.generate_statevector(gamma)
@@ -183,6 +183,6 @@ def connect(app_name, ivy_bus):
             on_die_proc)
     IvyStart(ivy_bus)
 
-# connect(options.app_name, options.ivy_bus)
-#
-# start_test("test_mode1.txt")
+connect(options.app_name, options.ivy_bus)
+
+start_test("test_mode1.txt")

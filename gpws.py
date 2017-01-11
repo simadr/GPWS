@@ -155,7 +155,7 @@ class Etat():
         z = 0
         fpa = gamma
         if gamma !=0 and self.get_VerticalSpeed() != 0 :
-            vp = self.get_VerticalSpeed()/math.sin(gamma) * 0.00508 #Conversion ft/min to m/s
+            vp = self.get_VerticalSpeed()/math.sin(abs(gamma)) * 0.00508 #Conversion ft/min to m/s
         else: vp = self.get_ComputedAirSpeed() * 0.514444# Conversion kts to m/s
         psi = 0
         phi = self.get_RollAngle()
@@ -170,7 +170,7 @@ class Etat():
         return "Config GEAR={} FLAPS={}\n".format(self.gear, self.flaps)
 
     def get_xy(self, mode):
-        x = self.list[mode.abs] if mode.abs != VZ else -self.list[mode.abs]
+        x = self.list[mode.abs]
         y = self.list[mode.ord]
         return (x, y)
 
@@ -179,7 +179,7 @@ class Etat():
         self.list[mode.abs] = x
         self.list[mode.ord] = y
         if mode.abs == VZ and gamma != 0:  #si on change la vz, on change la vp
-            self.list[COMPUTED_AIR_SPEED]  =  x/math.sin(gamma)
+            self.list[COMPUTED_AIR_SPEED]  =   x/math.sin(abs(gamma))
         elif mode.abs == COMPUTED_AIR_SPEED:
             self.list[VZ] = self.get_ComputedAirSpeed() * math.sin(gamma)
 
@@ -193,7 +193,7 @@ class Etat():
     def change_state(self, x, y, z, vp, fpa, psi, phi):
         self.list[COMPUTED_AIR_SPEED] = vp * 1.94384 #conversion ms to kts
         self.list[VZ] =  - (math.sin(fpa) * vp) * 196.85 #conversion m/s to - ft/min
-        self.list[ROLL_ANGLE] = math.degrees(phi)
+        self.list[ROLL_ANGLE] = math.degrees(abs(phi))
 
     def change_fmsinfo(self, phase, da, dh):
         self.phase = phase
@@ -230,7 +230,9 @@ def Creation_Modes():
     TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],[UP], "Too low gear", "sons/nabtoolowgear.wav")
     GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],[DOWN], "GLIDESLOPE", "sons/nabglideslope2.wav")
     GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',19.5,[None],[DOWN],"Glideslope (reduced)", "sons/nabglideslope.wav")
-    ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[180,500],[180,0], [10, 0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
+    #ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[180,500],[180,0], [10, 0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
+    ExRollAngle_16 = Enveloppe([[10,30],[40,150],[40,0],[10,0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
+    ExRollAngle_26 = Enveloppe([[40,0],[40,5000],[180,5000],[180,0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
 
 
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
@@ -240,7 +242,7 @@ def Creation_Modes():
     Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],[APP,LDG,TO],COMPUTED_AIR_SPEED,RADIOALT)
     Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT)
     Mode5.disable()
-    Mode6 = Mode([ExRollAngle6],[None],ROLL_ANGLE,RADIOALT)
+    Mode6 = Mode([ExRollAngle_16, ExRollAngle_26],[None],ROLL_ANGLE,RADIOALT)
 
     return [Mode1,Mode2,Mode3,Mode4,Mode5,Mode6]
 
