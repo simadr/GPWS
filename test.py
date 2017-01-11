@@ -95,7 +95,8 @@ def segm_test_diag(mode):
 
 def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename, modes_to_plot=None):
     """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
-    etat = gpws.Etat(0, 5000, 0, 0, 0, 0, 0, flaps, gear, phase)
+    etat = gpws.Etat(15, 5000, 0, 0, 0, 0, 0, flaps, gear, phase)
+    etat.dh = 100
     pas_abs = (absf - absi) / nb_points
     pas_ord = (ordf - ordi) / nb_points
     abs = absi

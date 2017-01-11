@@ -3,7 +3,6 @@ import sys, logging, math
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
 
-bus = "127.255.255.255:2010"
 
 try:
     import pygame
@@ -31,8 +30,29 @@ CLIMB = "CLIMB"
 TO  = "TAKE-OFF"
 LDG = "LANDING"
 
+#Callouts
+CALLOUTS = [(0, "sons/nappminimuns.wav)"), (10,"sons/abn10.wav"), (20,"sons/abn20.wav"), (30,"sons/abn30.wav"), (40,"sons/abn40.wav"),
+            (50,"sons/abn50.wav"), (100, "sons/abn100.wav"), (500, "sons/abn500"),
+            (1000, "sons/abn1000.wav"), (2500, "sons/abn2500.wav")]
+
+#Ivy messages
+PULLUP_MSG = "Pullup={}"
+STOP_PULLUP_UP_MSG = "StopPullup"
+
+#lecture son
+def play_sound(sound):
+    if TEST_SON:
+        pygame.init()
+        song = pygame.mixer.Sound(sound)
+        song.play()
+        while pygame.mixer.get_busy():
+             pygame.time.delay(100)
+        pygame.quit()
+    else:
+        print("Lecture de ", sound)
+
 class Enveloppe():
-    def __init__(self, vertexes, alertlevel, priority, flaps, gear, name, sound):
+    def __init__(self, vertexes, alertlevel, priority, flaps, gear, name, sound, pullup=False):
         self.vertexes = vertexes
         self.alertlevel = alertlevel
         self.priority = priority
@@ -40,6 +60,7 @@ class Enveloppe():
         self.gear = gear
         self.sound = sound
         self.name = name
+        self.pullup = pullup
 
     def collision(self,P):
         graphe = self.vertexes
@@ -68,21 +89,13 @@ class Enveloppe():
             return self.collision(point)
 
     def play_sound(self):
-        if TEST_SON:
-            pygame.init()
-            song = pygame.mixer.Sound(self.sound)
-            song.play()
-            while pygame.mixer.get_busy():
-                 pygame.time.delay(100)
-            pygame.quit()
-        else:
-            print("Lecture de ", self.sound)
+        play_sound(self.sound)
 
     def __repr__(self):
         return self.name
 
 class Mode():
-    def __init__(self, list_enveloppes,phase,abs,ord):
+    def __init__(self, list_enveloppes, phase, abs, ord):
         self.list_enveloppes = list_enveloppes
         self.phase = phase
         self.on = True
@@ -132,6 +145,10 @@ class Etat():
         self.phase = phase
         self.da = 0
         self.dh = 0
+
+        self.is_pullup = False #Savoir si on est en situation de pullup
+
+        self.end_callout = False #Definie la fin des callouts ie radioaltitude < dh
 
         # Attribut permettant de savoir si l'etat est correctement initialise
         self.init_ralt = False
@@ -199,6 +216,8 @@ class Etat():
             self.list[COMPUTED_AIR_SPEED]  =   x/math.sin(abs(gamma))
         elif mode.abs == COMPUTED_AIR_SPEED:
             self.list[VZ] = self.get_ComputedAirSpeed() * math.sin(gamma)
+        # elif mode.abs == TERRAIN_CLOSURE_RATE:
+        #     self.list[RADIOALT] = self.get_RadioAltitude() - x
 
 
     def change_radio_alt(self, z):
@@ -220,6 +239,18 @@ class Etat():
     def change_config(self, flaps, gear):
         self.flaps = flaps
         self.gear = gear
+
+    def callout(self):
+        if (not self.end_callout) and self.phase == APP and self.get_VerticalSpeed() > 0 :
+            ralt = self.get_RadioAltitude()
+            for (callout, sound) in CALLOUTS:
+                if ralt <= callout + self.dh:
+                    play_sound(sound)
+                    #print("Callout:  {}".format(callout))
+                    if callout == 0: self.end_callout = True
+                    break
+
+
 
     def is_init(self):
         return self.init_config and self.init_fms and self.init_ralt and self.init_state
@@ -251,19 +282,32 @@ class Etat():
 
 def Creation_Modes():
 
-    PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],'W',2,[None],[None], "Pullup", "sons/nabpullup.wav")
-    SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],'C',17,[None],[None], "Sink rate", "sons/nabsinkrate.wav")
-    PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],'W',3,[None],[None], "terrain Pull up", "sons/nabterrainaheadpullup.wav")
-    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,[None],[None], "Terrain", "sons/nabglideslope2.wav")
-    DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None], "Don't sink", "sons/ndontsink.wav")
-    TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None], "Too low terrain", "sons/TooLowTerrain.wav")
-    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None], "Too low flaps", "sons/nabtoolowflaps.wav")
-    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],[UP], "Too low gear", "sons/nabtoolowgear.wav")
-    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],[DOWN], "GLIDESLOPE", "sons/nabglideslope2.wav")
-    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',19.5,[None],[DOWN],"Glideslope (reduced)", "sons/nabglideslope.wav")
-    #ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[180,500],[180,0], [10, 0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
-    ExRollAngle_16 = Enveloppe([[10,30],[40,150],[40,0],[10,0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
-    ExRollAngle_26 = Enveloppe([[40,0],[40,5000],[180,5000],[180,0]],'C',22,[None],[None], "Bank angle", "sons/nbankangle.wav")
+    PullUp1 = Enveloppe([[1750,370],[3000,1000],[6225,2075],[8000,2075],[8000,0],[1750,0]],'W',2,[None],[None],
+                        "Pullup_rate_sink", "sons/nabpullup.wav", pullup=True)
+    SinkRate1 = Enveloppe([[1750,370],[2610,1180],[5150,2450],[8000,2450],[8000,0],[1750,0]],'C',17,[None],[None],
+                          "Sink rate", "sons/nabsinkrate.wav")
+    PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],'W',3,[None],[None], "Pullup_terrain",
+                        "sons/nabterrainaheadpullup.wav", pullup=True)
+    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,[None],
+                         [None], "Terrain", "sons/nabglideslope2.wav")
+    DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None], "Don't sink",
+                          "sons/ndontsink.wav")
+    TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None],
+                               "Too low terrain", "sons/TooLowTerrain.wav")
+    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None], "Too low flaps",
+                             "sons/nabtoolowflaps.wav")
+    TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],[UP], "Too low gear",
+                            "sons/nabtoolowgear.wav")
+    GlideSlope5 = Enveloppe([[2,300],[4,300],[4,0],[3.68,0],[2,150]],'C',19,[None],[DOWN],
+                            "GLIDESLOPE", "sons/nabglideslope2.wav")
+    GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',19.5,[None],[DOWN],
+                                   "Glideslope (reduced)", "sons/nabglideslope.wav")
+    #ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[180,500],[180,0], [10, 0]],'C',22,[None],[None], "Bank angle",
+    #  "sons/nbankangle.wav")
+    ExRollAngle_16 = Enveloppe([[10,30],[40,150],[40,0],[10,0]],'C',22,[None],[None], "Bank angle",
+                               "sons/nbankangle.wav")
+    ExRollAngle_26 = Enveloppe([[40,0],[40,5000],[180,5000],[180,0]],'C',22,[None],[None], "Bank angle",
+                               "sons/nbankangle.wav")
 
 
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
@@ -292,6 +336,17 @@ def test_mode(Etat):
     key_sort = lambda env : env.priority
     L.sort(key=key_sort) #On trie selon la plus petite prioritee
     return (L[0] if len(L)!=0 else None)
+
+def alert(env, etat):
+    print ("alert : {}".format(env.name))
+    env.play_sound()
+    if env.pullup:
+        IvySendMsg(PULLUP_MSG.format(env.name))
+        etat.is_pullup = True
+    else:
+        if etat.is_pullup:
+            IvySendMsg(STOP_PULLUP_UP_MSG)
+        etat.is_pullup = False
 
 
 ## Variables globals
@@ -340,10 +395,12 @@ if __name__ == '__main__':
         IvyStart(ivy_bus)
 
     def on_time(agent, *larg):
+        if global_etat.init_ralt and global_etat.init_fms:
+            global_etat.callout()
         if global_etat.is_init():
             env = test_mode(global_etat)
             if env != None:
-                env.play_sound()
+                alert(env, global_etat)
         else:
             print("GPWS NOT INITIALIZED")
         print global_etat
