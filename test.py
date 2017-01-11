@@ -79,18 +79,36 @@ def plot_trajectory(traj, modes, flaps, gear):
 
 
 
-
-def segm_test_diag(mode):
+def segm_test_diag(mode, sens_parcours): #sens_parcours : True de gauche a droite, False de droite a gauche
     """Cree un segment de test sur la 'diagonale'  du mode"""
-    xmin = mode.get_xmin_ymin_xmax_ymax()[0]
-    ymin = mode.get_xmin_ymin_xmax_ymax()[1]
-    xmax = mode.get_xmin_ymin_xmax_ymax()[2]
-    ymax = mode.get_xmin_ymin_xmax_ymax()[3]
-    x_initial = xmin - (xmax -xmin) * 0.2
-    y_inital = ymax + (ymax - ymin) * 0.2
-    x_final = xmax - 0.1 *  (xmax - xmin)
-    y_final = ymin + 0.1 * (ymax - ymin)
+    (xmin, ymin, xmax, ymax) = mode.get_xmin_ymin_xmax_ymax()
+    if sens_parcours:
+        x_initial = xmin - (xmax -xmin) * 0.2
+        y_inital = ymax + (ymax - ymin) * 0.2
+        x_final = xmax - 0.1 *  (xmax - xmin)
+        y_final = ymin + 0.1 * (ymax - ymin)
+    else:
+        x_initial = xmax - 0.1 *  (xmax - xmin)
+        y_inital = ymin + 0.1 * (ymax - ymin)
+        x_final = xmin - (xmax -xmin) * 0.2
+        y_final = ymax + (ymax - ymin) * 0.2
     return x_initial, y_inital, x_final, y_final
+
+def segm_test_rect(mode, position_y, sens_parcours): #position_y : position de la droite par rapport a l'enveloppe #sens_parcours : True de gauche a droite, False de droite a gauche
+    """Cree un segment de test en ligne droite du mode"""
+    (xmin, ymin, xmax, ymax) = mode.get_xmin_ymin_xmax_ymax()
+    if sens_parcours:
+        x_initial = xmin - (xmax -xmin) * 0.2
+        y_inital = position_y * (ymax - ymin) + ymin
+        x_final = xmax - 0.1 *  (xmax - xmin)
+        y_final = y_inital
+    else:
+        x_initial = xmax - 0.1 *  (xmax - xmin)
+        y_inital = position_y * (ymax - ymin) + ymin
+        x_final = xmin - (xmax -xmin) * 0.2
+        y_final = y_inital
+    return x_initial, y_inital, x_final, y_final
+
 
 
 def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename, modes_to_plot=None):
@@ -125,16 +143,26 @@ def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_poin
 
     plot_trajectory(traj, modes_to_plot, flaps, gear)
 
-
+def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
+    absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = True)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = False)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = True)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = False)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
 
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
 # plot_trajectory(traj,mode, 1, 1)
 mode = gpws.L_Modes[1]
 mode.enable()
-xi, yi, xf, yf = segm_test_diag(mode)
+xi, yi, xf, yf = segm_test_diag(mode, sens_parcours = True)
 # create_test(mode1, 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
-create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt", gpws.L_Modes)
+# create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt", gpws.L_Modes)
+create_test_global(mode,gpws.L_Modes, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, 20)
+
 
 #parse
 usage = "usage: %prog [options]"
