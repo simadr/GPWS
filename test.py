@@ -8,6 +8,8 @@ import sys, logging
 logger = logging.getLogger('Ivy')
 from optparse import OptionParser
 
+from copy import copy
+
 def ftmin_to_ms(vz):
     return 0.00508*vz
 
@@ -19,7 +21,7 @@ def plot_mode(mode, fig=None, ax=None):
     :param mode: Classe d'un mode
     :return: Dessine les enveloppes d'un mode
     """
-    if fig == None or ax==None:
+    if fig == None and ax==None:
         fig, ax = plt.subplots()
     patches = []
 
@@ -33,40 +35,46 @@ def plot_mode(mode, fig=None, ax=None):
 
     ax.add_collection(p)
     plt.autoscale()
-    if fig == None or ax==None:
+    if fig == None and ax==None:
         plt.show()
 
-def plot_trajectory(traj, mode, flaps, gear):
+def plot_trajectory(traj, modes, flaps, gear):
     """
-    :param traj: Liste de points
-    :param mode: Mode
+    :param traj: Liste d'etats
+    :param modes: liste de modes
     :return: Plot les points de la trajectoire de la forme associee a l'enveloppe dans laquelle ils se trouvent
     """
     fig, ax = plt.subplots()
-    plot_mode(mode, fig ,ax)
+
+    number_of_lines = math.ceil(float(len(modes)) / 3)
+    number_of_columns = math.ceil(float(len(modes)) / number_of_lines)
+
     markers = ['o', 'v', '^', '<', '>', '8', 's', 'p']
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+    for i in range(len(modes)):
+        ax = plt.subplot(number_of_lines, number_of_columns, i+1)
+        mode = modes[i]
+        plot_mode(mode, fig ,ax)
+        for etat in traj:
+            x, y = etat.get_xy(mode)
+            env = mode.get_enveloppe((x,y), flaps, gear)
+            if env == None:
+                marker = markers[0]
+                color =  colors[0]
+            else:
+                i = mode.list_enveloppes.index(env)
+                marker = markers[i + 1]
+                color= colors[i + 1]
+            plt.plot(x, y, marker, color=color)
 
-
-    for (x,y) in traj:
-        env = mode.get_enveloppe((x,y), flaps, gear)
-        if env == None:
-            marker = markers[0]
-            color =  colors[0]
-        else:
-            i = mode.list_enveloppes.index(env)
-            marker = markers[i + 1]
-            color= colors[i + 1]
-        plt.plot(x, y, marker, color=color)
-
-    nb_env = len(mode.list_enveloppes)
-    legends = [plt.Line2D((0,1),(0,0), marker=markers[0], linestyle='', color= colors[0])]
-    description = ['Hors enveloppe']
-    for i in range(nb_env):
-        legends.append(plt.Line2D((0,1),(0,0), marker=markers[i+1], linestyle='', color= colors[i+1]))
-        description.append(mode.list_enveloppes[i].name)
-    ax.legend(legends, description)
-    plt.autoscale()
+        nb_env = len(mode.list_enveloppes)
+        legends = [plt.Line2D((0,1),(0,0), marker=markers[0], linestyle='', color= colors[0])]
+        description = ['Hors enveloppe']
+        for i in range(nb_env):
+            legends.append(plt.Line2D((0,1),(0,0), marker=markers[i+1], linestyle='', color= colors[i+1]))
+            description.append(mode.list_enveloppes[i].name)
+        ax.legend(legends, description, prop={'size':8})
+        plt.autoscale()
     plt.show()
 
 
@@ -90,7 +98,7 @@ def segm_test_diag(mode):
     y_final = ymin + 0.1 * (ymax - ymin)
     return x_initial, y_inital, x_final, y_final
 
-def create_test(mode, phase, flaps, gear,  gamma, absi, absf, ordi, ordf, nb_points, filename):
+def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename, modes_to_plot=None):
     """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
     etat = gpws.Etat(0, 5000, 0, 0, 0, 0, 0, flaps, gear, phase)
     pas_abs = (absf - absi) / nb_points
@@ -111,23 +119,27 @@ def create_test(mode, phase, flaps, gear,  gamma, absi, absf, ordi, ordf, nb_poi
         fic.write(statevector)
         fic.write(fms)
         fic.write(config)
-        traj.append((abs, ord))
+        traj.append(copy(etat))
         abs += pas_abs
         ord += pas_ord
     fic.write("Time t={}\n".format(nb_points))
     fic.close()
-    plot_trajectory(traj, mode, flaps, gear)
+    print traj
+    if modes_to_plot == None:
+        modes_to_plot = [mode]
+
+    plot_trajectory(traj, modes_to_plot, flaps, gear)
 
 
 
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
 # plot_trajectory(traj,mode, 1, 1)
-mode = gpws.L_Modes[5]
+mode = gpws.L_Modes[1]
 mode.enable()
 xi, yi, xf, yf = segm_test_diag(mode)
 # create_test(mode1, 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
-create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt")
+create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt", gpws.L_Modes)
 
 #parse
 usage = "usage: %prog [options]"
@@ -183,6 +195,6 @@ def connect(app_name, ivy_bus):
             on_die_proc)
     IvyStart(ivy_bus)
 
-connect(options.app_name, options.ivy_bus)
-
-start_test("test_mode1.txt")
+# connect(options.app_name, options.ivy_bus)
+#
+# start_test("test_mode1.txt")

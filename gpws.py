@@ -207,6 +207,20 @@ class Etat():
     def is_init(self):
         return self.init_config and self.init_fms and self.init_ralt and self.init_state
 
+    def __copy__(self):
+        copy = Etat(self.get_VerticalSpeed(), self.get_RadioAltitude(), self.get_TerrainClosureRate(),
+                    self.get_MSLAltitudeLoss(), self.get_ComputedAirSpeed(), self.get_GlideSlopeDeviation(),
+                    self.get_RollAngle(), self.flaps, self.gear, self.phase
+                    )
+        copy.da = self.da
+        copy.dh = self.dh
+        copy.init_fms = self.init_fms
+        copy.init_ralt = self.init_ralt
+        copy.init_state = self.init_state
+        copy.init_config = self.init_config
+        return copy
+
+
     def __repr__(self):
         to_print = ""
         to_print +=  "Vertical speed = {}\n".format(self.get_VerticalSpeed())
