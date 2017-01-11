@@ -78,25 +78,20 @@ def plot_trajectory(traj, modes, flaps, gear):
     plt.show()
 
 
+
+
 def segm_test_diag(mode):
     """Cree un segment de test sur la 'diagonale'  du mode"""
-    xmin = xmax = mode.list_enveloppes[0].vertexes[0][0]
-    ymin = ymax = mode.list_enveloppes[0].vertexes[0][1]
-    for env in mode.list_enveloppes:
-        for (x, y) in env.vertexes:
-            if x < xmin:
-                xmin = x
-            elif x > xmax:
-                xmax = x
-            if y < ymin:
-                ymin = y
-            elif y > ymax:
-                ymax = y
+    xmin = mode.get_xmin_ymin_xmax_ymax()[0]
+    ymin = mode.get_xmin_ymin_xmax_ymax()[1]
+    xmax = mode.get_xmin_ymin_xmax_ymax()[2]
+    ymax = mode.get_xmin_ymin_xmax_ymax()[3]
     x_initial = xmin - (xmax -xmin) * 0.2
     y_inital = ymax + (ymax - ymin) * 0.2
     x_final = xmax - 0.1 *  (xmax - xmin)
     y_final = ymin + 0.1 * (ymax - ymin)
     return x_initial, y_inital, x_final, y_final
+
 
 def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename, modes_to_plot=None):
     """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
@@ -195,6 +190,6 @@ def connect(app_name, ivy_bus):
             on_die_proc)
     IvyStart(ivy_bus)
 
-# connect(options.app_name, options.ivy_bus)
-#
+connect(options.app_name, options.ivy_bus)
+
 # start_test("test_mode1.txt")

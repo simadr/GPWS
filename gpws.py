@@ -101,6 +101,23 @@ class Mode():
             enveloppe_eff.sort(key=key_sort) #On trie selon la plus petite prioritee
             return enveloppe_eff[0]
 
+
+    def get_xmin_ymin_xmax_ymax(self):
+        xmin = xmax = self.list_enveloppes[0].vertexes[0][0]
+        ymin = ymax = self.list_enveloppes[0].vertexes[0][1]
+        for env in self.list_enveloppes:
+            for (x, y) in env.vertexes:
+                if x < xmin:
+                   xmin = x
+                elif x > xmax:
+                    xmax = x
+                if y < ymin:
+                    ymin = y
+                elif y > ymax:
+                    ymax = y
+        return (xmin, ymin, xmax, ymax)
+
+
     def disable(self):
         self.on = False
 
