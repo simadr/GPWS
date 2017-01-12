@@ -38,19 +38,21 @@ def plot_mode(mode, fig=None, ax=None):
     if fig == None and ax==None:
         plt.show()
 
-def plot_trajectory(traj, modes, flaps, gear):
+def plot_trajectory(traj, modes, flaps, gear, gamma, phase, mode_test_name):
     """
     :param traj: Liste d'etats
     :param modes: liste de modes
     :return: Plot les points de la trajectoire de la forme associee a l'enveloppe dans laquelle ils se trouvent
     """
-    fig, ax = plt.subplots()
 
+    fig, ax = plt.subplots()
+    fig.text(0.3, 0.95, u'Test du {0} - flaps : {1} | gear : {2} | phase : {3} | gamma : {4}'.format(mode_test_name,flaps, gear, phase, math.degrees(gamma)), fontsize=18)
     number_of_lines = math.ceil(float(len(modes)) / 3)
     number_of_columns = math.ceil(float(len(modes)) / number_of_lines)
 
     markers = ['o', 'v', '^', '<', '>', '8', 's', 'p']
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+
     for i in range(len(modes)):
         ax = plt.subplot(number_of_lines, number_of_columns, i+1)
         mode = modes[i]
@@ -65,6 +67,7 @@ def plot_trajectory(traj, modes, flaps, gear):
                 i = mode.list_enveloppes.index(env)
                 marker = markers[i + 1]
                 color= colors[i + 1]
+            plt.title(mode.name)
             plt.plot(x, y, marker, color=color)
 
         nb_env = len(mode.list_enveloppes)
@@ -75,7 +78,11 @@ def plot_trajectory(traj, modes, flaps, gear):
             description.append(mode.list_enveloppes[i].name)
         ax.legend(legends, description, prop={'size':8})
         plt.autoscale()
-    plt.show()
+    try :
+
+        plt.show()
+    except AttributeError:
+        print("Erreur d'affichage")
 
 
 
@@ -142,17 +149,21 @@ def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_poin
     if modes_to_plot == None:
         modes_to_plot = [mode]
 
-    plot_trajectory(traj, modes_to_plot, flaps, gear)
+    plot_trajectory(traj, modes_to_plot, flaps, gear, gamma, phase, mode.name)
 
 def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
     absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = True)
     create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_gd.txt", modes_to_plot = list_modes)
+    plt.close()
     absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = False)
     create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_dg.txt", modes_to_plot = list_modes)
+    plt.close()
     absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = True)
     create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_gd.txt", modes_to_plot = list_modes)
+    plt.close()
     absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = False)
     create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_dg.txt", modes_to_plot = list_modes)
+    plt.close()
 
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
@@ -221,4 +232,4 @@ def connect(app_name, ivy_bus):
 
 connect(options.app_name, options.ivy_bus)
 
-# start_test("test_mode1.txt")
+#start_test("test_mode1.txt")
