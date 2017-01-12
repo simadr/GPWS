@@ -31,7 +31,7 @@ UP = "Up"
 #Phase
 APP = "APPROACH"
 CLIMB = "CLIMB"
-TO  = "TAKE-OFF"
+TAKEOFF  = "TAKE-OFF"
 LDG = "LANDING"
 
 #Callouts
@@ -159,6 +159,8 @@ class Etat():
 
         self.last_callout = len(CALLOUTS) #Definie le dernier callout effectue
 
+        self.max_ralt = 0 # POur connaitre le msl altitude loss
+
         # Attribut permettant de savoir si l'etat est correctement initialise
         self.init_ralt = False
         self.init_state = False
@@ -244,6 +246,12 @@ class Etat():
         self.phase = phase
         self.da = da
         self.dh = dh
+        alt_diff = self.max_ralt - self.get_RadioAltitude()
+        if self.phase == TAKEOFF and self.init_ralt and (self.max_ralt - self.get_RadioAltitude() < 0) and self.get_VerticalSpeed() :
+            self.list[MSL_ALT_LOSS] = alt_diff
+        else:
+            self.list[MSL_ALT_LOSS] = 0
+
 
     def change_config(self, flaps, gear):
         self.flaps = flaps
@@ -323,8 +331,7 @@ def Creation_Modes():
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT, "mode1")
     Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT, "mode2")
     Mode3 = Mode([DontSink3],[CLIMB],MSL_ALT_LOSS,RADIOALT, "mode3")
-    Mode3.disable()
-    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],[APP,LDG,TO],COMPUTED_AIR_SPEED,RADIOALT, "mode4")
+    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4], [APP, LDG, TAKEOFF], COMPUTED_AIR_SPEED, RADIOALT, "mode4")
     Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT, "mode5")
     Mode5.disable()
     Mode6 = Mode([ExRollAngle_16, ExRollAngle_26],[None],ROLL_ANGLE,RADIOALT, "mode7")
