@@ -95,12 +95,13 @@ class Enveloppe():
         return self.name
 
 class Mode():
-    def __init__(self, list_enveloppes, phase, abs, ord):
+    def __init__(self, list_enveloppes, phase, abs, ord, name):
         self.list_enveloppes = list_enveloppes
         self.phase = phase
         self.on = True
         self.ord = ord
         self.abs = abs
+        self.name = name
 
     def get_enveloppe(self, point, flaps, gear):
         enveloppe_eff = [] #listes des enveloppes ou se trouve le point
@@ -310,14 +311,14 @@ def Creation_Modes():
                                "sons/nbankangle.wav")
 
 
-    Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT)
-    Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT)
-    Mode3 = Mode([DontSink3],[CLIMB],MSL_ALT_LOSS,RADIOALT)
+    Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT, "mode1")
+    Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT, "mode2")
+    Mode3 = Mode([DontSink3],[CLIMB],MSL_ALT_LOSS,RADIOALT, "mode3")
     Mode3.disable()
-    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],[APP,LDG,TO],COMPUTED_AIR_SPEED,RADIOALT)
-    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT)
+    Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4],[APP,LDG,TO],COMPUTED_AIR_SPEED,RADIOALT, "mode4")
+    Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT, "mode5")
     Mode5.disable()
-    Mode6 = Mode([ExRollAngle_16, ExRollAngle_26],[None],ROLL_ANGLE,RADIOALT)
+    Mode6 = Mode([ExRollAngle_16, ExRollAngle_26],[None],ROLL_ANGLE,RADIOALT, "mode7")
 
     return [Mode1,Mode2,Mode3,Mode4,Mode5,Mode6]
 

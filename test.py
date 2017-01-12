@@ -146,13 +146,13 @@ def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_poin
 
 def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
     absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = True)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_gd.txt", modes_to_plot = list_modes)
     absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = False)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_dg.txt", modes_to_plot = list_modes)
     absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = True)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_gd.txt", modes_to_plot = list_modes)
     absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = False)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = "mode", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_dg.txt", modes_to_plot = list_modes)
 
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
