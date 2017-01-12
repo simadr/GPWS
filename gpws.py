@@ -20,6 +20,10 @@ COMPUTED_AIR_SPEED = 4
 GLIDE_SLOPE_DEVIATION = 5
 ROLL_ANGLE = 6
 
+
+#Conversion
+FTMIN_TO_MS = 0.00508
+KTS_TO_MS = 0.514444
 #Gear
 DOWN = "Down"
 UP = "Up"
@@ -31,7 +35,8 @@ TO  = "TAKE-OFF"
 LDG = "LANDING"
 
 #Callouts
-CALLOUTS = [(0, "sons/nappminimuns.wav)"), (10,"sons/abn10.wav"), (20,"sons/abn20.wav"), (30,"sons/abn30.wav"), (40,"sons/abn40.wav"),
+CALLOUTS = [(0, "sons/nappminimuns.wav)"), (10,"sons/abn10.wav"), (20,"sons/abn20.wav"), (30,"sons/abn30.wav"),
+            (40,"sons/abn40.wav"),
             (50,"sons/abn50.wav"), (100, "sons/abn100.wav"), (500, "sons/abn500"),
             (1000, "sons/abn1000.wav"), (2500, "sons/abn2500.wav")]
 
@@ -146,10 +151,13 @@ class Etat():
         self.phase = phase
         self.da = 0
         self.dh = 0
+        self.time = 0
+
+        self.last_radio = 0 #dernier temps ou on a recu l'info de radio alt
 
         self.is_pullup = False #Savoir si on est en situation de pullup
 
-        self.end_callout = False #Definie la fin des callouts ie radioaltitude < dh
+        self.last_callout = len(CALLOUTS) #Definie le dernier callout effectue
 
         # Attribut permettant de savoir si l'etat est correctement initialise
         self.init_ralt = False
@@ -210,22 +218,22 @@ class Etat():
         return (x, y)
 
     def set_xy(self, x, y, mode, gamma=0):
-        """  Modifie l'etat de sorte qu'il se trouve aux coord (x,y) dans le mode passe en param  """
+        """  Modifie l'etat de sorte qu'il se trouve aux coord (x,y) dans le mode passe en param (pour test uniquement) """
         self.list[mode.abs] = x
         self.list[mode.ord] = y
         if mode.abs == VZ and gamma != 0:  #si on change la vz, on change la vp
-            self.list[COMPUTED_AIR_SPEED]  =   x/math.sin(abs(gamma))
+            self.list[COMPUTED_AIR_SPEED]  =   (x * FTMIN_TO_MS)/( math.sin(abs(gamma)) * KTS_TO_MS)
         elif mode.abs == COMPUTED_AIR_SPEED:
             self.list[VZ] = self.get_ComputedAirSpeed() * math.sin(gamma)
-        # elif mode.abs == TERRAIN_CLOSURE_RATE:
-        #     self.list[RADIOALT] = self.get_RadioAltitude() - x
+
 
 
     def change_radio_alt(self, z):
         z = z / 0.3048 #conversion m to ft
         if global_etat.init_ralt: #On met a jour le terrain closure rate si possible
-            self.list[TERRAIN_CLOSURE_RATE] = self.get_RadioAltitude() - z
+            self.list[TERRAIN_CLOSURE_RATE] = ((self.get_RadioAltitude() - z)/ (self.time - self.last_radio) )  * 60
         self.list[RADIOALT] = z
+        self.last_radio = self.time
 
     def change_state(self, x, y, z, vp, fpa, psi, phi):
         self.list[COMPUTED_AIR_SPEED] = vp * 1.94384 #conversion ms to kts
@@ -242,13 +250,14 @@ class Etat():
         self.gear = gear
 
     def callout(self):
-        if (not self.end_callout) and self.phase == APP and self.get_VerticalSpeed() > 0 :
+        if self.phase == APP and self.get_VerticalSpeed() > 0 :
             ralt = self.get_RadioAltitude()
-            for (callout, sound) in CALLOUTS:
+            for i in range(self.last_callout):
+                (callout, sound) = CALLOUTS[i]
                 if ralt <= callout + self.dh:
                     play_sound(sound)
-                    #print("Callout:  {}".format(callout))
-                    if callout == 0: self.end_callout = True
+                    print("Callout:  {}".format(callout))
+                    self.last_callout = i
                     break
 
 
@@ -396,6 +405,8 @@ if __name__ == '__main__':
         IvyStart(ivy_bus)
 
     def on_time(agent, *larg):
+        t = float(larg[0])
+        global_etat.time = t
         if global_etat.init_ralt and global_etat.init_fms:
             global_etat.callout()
         if global_etat.is_init():
