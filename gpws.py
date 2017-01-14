@@ -232,7 +232,7 @@ class Etat():
 
     def change_radio_alt(self, z):
         z = z / 0.3048 #conversion m to ft
-        if global_etat.init_ralt: #On met a jour le terrain closure rate si possible
+        if global_etat.init_ralt and  (self.time - self.last_radio) != 0: #On met a jour le terrain closure rate si possible
             self.list[TERRAIN_CLOSURE_RATE] = ((self.get_RadioAltitude() - z)/ (self.time - self.last_radio) )  * 60
         self.list[RADIOALT] = z
         self.last_radio = self.time
@@ -461,6 +461,6 @@ if __name__ == '__main__':
     IvyBindMsg(on_time, '^Time t=(\S+)')
     IvyBindMsg(on_radioalt, '^RadioAltimeter groundAlt=(\S+)')
     IvyBindMsg(on_statevector, 'StateVector\s+x=(\S+)\s+y=(\S+)\sz=(\S+)\sVp=(\S+)\sfpa=(\S+)\spsi=(\S+)\sphi=(\S+)')
-    IvyBindMsg(on_fms, '^FMS_TO_GPWS\sPHASE=(\S+)\sDA=(\S+)\sDH=(\S+)')
+    IvyBindMsg(on_fms, '^FMS_TO_GPWS\sphase=(\S+),\sda=(\S+),\sdh=(\S+)')
     IvyBindMsg(on_config, 'Config\s+GEAR=(\S+)\s+FLAPS=(\S+)')
     IvyMainLoop()
