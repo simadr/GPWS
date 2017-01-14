@@ -362,6 +362,7 @@ def alert(env, etat):
         etat.is_pullup = True
     else:
         if etat.is_pullup:
+            print("Stop pull up")
             IvySendMsg(STOP_PULLUP_UP_MSG)
         etat.is_pullup = False
 

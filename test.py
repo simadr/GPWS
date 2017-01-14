@@ -40,8 +40,13 @@ def plot_mode(mode, fig=None, ax=None):
 
 def plot_trajectory(traj, modes, flaps, gear, gamma, phase, mode_test_name):
     """
-    :param traj: Liste d'etats
+    :param traj: liste d'etats
     :param modes: liste de modes
+    :param flaps : configuration volets de l'avion
+    :param gear : configuration train d'atterrissage de l'avion
+    :param gamma : pente de l'avion
+    :param phase : phase de vol de l'avion
+    :param mode_test_name : nom du mode pour lequel la liste d'etats a ete creee pour le tester
     :return: Plot les points de la trajectoire de la forme associee a l'enveloppe dans laquelle ils se trouvent
     """
 
@@ -101,8 +106,8 @@ def segm_test_diag(mode, sens_parcours): #sens_parcours : True de gauche a droit
         y_final = ymax + (ymax - ymin) * 0.2
     return x_initial, y_inital, x_final, y_final
 
-def segm_test_rect(mode, position_y, sens_parcours): #position_y : position de la droite par rapport a l'enveloppe #sens_parcours : True de gauche a droite, False de droite a gauche
-    """Cree un segment de test en ligne droite du mode"""
+def segm_test_rect(mode, position_y, sens_parcours): #position_y : position en ordonnee de la droite par rapport a l'enveloppe #sens_parcours : True de gauche a droite, False de droite a gauche
+    """Cree un segment de test 'en ligne droite' du mode"""
     (xmin, ymin, xmax, ymax) = mode.get_xmin_ymin_xmax_ymax()
     if sens_parcours:
         x_initial = xmin - (xmax -xmin) * 0.2
@@ -119,7 +124,22 @@ def segm_test_rect(mode, position_y, sens_parcours): #position_y : position de l
 
 
 def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename, modes_to_plot=None):
-    """ Creer un fichier de test a partir d'un mode, d'un gamma (constant ici), d'un point initial et final  """
+    """
+
+    :param mode: le mode a tester, de la classe Mode
+    :param flaps : configuration volets de l'avion
+    :param gear : configuration train d'atterrissage de l'avion
+    :param gamma : pente de l'avion
+    :param phase : phase de vol de l'avion
+    :param absi, absf : abscisses du point de depart et d'arrivee du segment de test, obtenu a partir d'une fonction segm_test
+    :param ordi, ordf : ordonnees du point de depart et d'arrivee du segment de test, obtenu a partir d'une fonction segm_test
+    :param nb_points : nombre de points/d'etats du segment de test
+    :param filename : nom que l'on donne au fichier de test qui va etre cree
+    :param modes_to_plot : liste des modes ou representer graphiquement la liste d'etats de test
+    :return cree un fichier texte test donnant une liste d'etats avion a rejouer pour simuler le passage de l'avion dans les enveloppes d'un mode et ainsi le tester
+    :return plot la liste d'etats de test (un segment) sur des graphiques representant les enveloppes des modes
+
+    """
     etat = gpws.Etat(15, 5000, 0, 0, 0, 0, 0, flaps, gear, phase)
     etat.dh = 100
     pas_abs = (absf - absi) / nb_points
@@ -152,6 +172,19 @@ def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_poin
     plot_trajectory(traj, modes_to_plot, flaps, gear, gamma, phase, mode.name)
 
 def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
+    """Automatise le test d'un mode sur plusieurs listes d'etats test en appelant la fonction create_test pour plusieurs pour ces listes d'etats test crees par les fonctions segm_test
+
+    :param mode:le mode a tester, de la classe Mode
+    :param list_modes:liste des modes ou representer graphiquement la liste d'etats de test
+    :param phase:phase de vol de l'avion
+    :param flaps:configuration volets de l'avion
+    :param gear:configuration train d'atterrissage de l'avion
+    :param gamma:pente de l'avion
+    :param nb_points:nombre de points/d'etats du segment de test
+    :return:cree quatre fichiers texte test donnant une liste d'etats avion a rejouer pour simuler le passage de l'avion dans les enveloppes d'un mode et ainsi le tester
+    :return plot la liste d'etats de test (un segment) sur des graphiques representant les enveloppes des modes
+
+    """
     absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = True)
     create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_gd.txt", modes_to_plot = list_modes)
     plt.close()
@@ -168,12 +201,12 @@ def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
 # traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
 # mode = gpws.Mode1
 # plot_trajectory(traj,mode, 1, 1)
-mode = gpws.L_Modes[1]
+mode = gpws.L_Modes[0]
 mode.enable()
 xi, yi, xf, yf = segm_test_diag(mode, sens_parcours = True)
 # create_test(mode1, 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
 # create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt", gpws.L_Modes)
-create_test_global(mode,gpws.L_Modes, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, 20)
+# create_test_global(mode,gpws.L_Modes, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, 20)
 
 
 #parse
@@ -199,9 +232,21 @@ logger.setLevel(level)
 
 
 def start_test(nom_fichier_test):
+    """
+
+    :param nom_fichier_test:le fichier contenant la liste d'etats test
+    :return:des que le time est lance, active la fonction send_fic_test qui simule le vol de l'avion avec la liste d'etats test de nom_fichier_test
+
+    """
     IvyBindMsg(send_fic_test(nom_fichier_test), "^Time t=")
 
 def send_fic_test(nom_fichier_test):
+    """
+
+    :param nom_fichier_test: le fichier contenant la liste d'etats test
+    :return: simule le vol de l'avion en envoyant sur le bus les etats, le time et la radioaltitude du fichier texte test
+
+    """
     import time
     time.sleep(0.2)
     with open(nom_fichier_test, "r") as fic:
@@ -232,4 +277,4 @@ def connect(app_name, ivy_bus):
 
 connect(options.app_name, options.ivy_bus)
 
-#start_test("test_mode1.txt")
+start_test("mode1traj_diag_dg.txt")
