@@ -21,9 +21,12 @@ GLIDE_SLOPE_DEVIATION = 5
 ROLL_ANGLE = 6
 
 
-#Conversion
+#Coefficents de conversion
 FTMIN_TO_MS = 0.00508
 KTS_TO_MS = 0.514444
+FT_TO_M = 0.3048
+MS_TO_KTS = 1.94384
+
 #Gear
 DOWN = "Down"
 UP = "Up"
@@ -44,8 +47,13 @@ CALLOUTS = [(0, "sons/nappminimuns.wav)"), (10,"sons/abn10.wav"), (20,"sons/abn2
 PULLUP_MSG = "Pullup={}"
 STOP_PULLUP_UP_MSG = "StopPullup"
 
-#lecture son
+
 def play_sound(sound):
+    """
+    Joue un son
+    :param sound: chemin du sons a jouer
+    :return: ()
+    """
     if TEST_SON:
         pygame.init()
         song = pygame.mixer.Sound(sound)
@@ -56,6 +64,7 @@ def play_sound(sound):
     else:
         print("Lecture de ", sound)
 
+#Classes
 class Enveloppe():
     def __init__(self, vertexes, alertlevel, priority, flaps, gear, name, sound, pullup=False):
         self.vertexes = vertexes
@@ -68,6 +77,10 @@ class Enveloppe():
         self.pullup = pullup
 
     def collision(self,P):
+        """
+        :param P: point de coordonees (x,y)
+        :return: True si le point est dans le polygone definissant l'enveloppe
+        """
         graphe = self.vertexes
         nbp = len(graphe)
         for i in range(0,nbp):
@@ -88,12 +101,20 @@ class Enveloppe():
         return True
 
     def have_inside(self, point, flaps, gear):
+        """
+
+        :param point: Point de coord x,y
+        :param flaps: position des flaps
+        :param gear: position des gears
+        :return: True si dans la config consideree, le point est dans l'enveloppe
+        """
         if (flaps not in self.flaps and self.flaps[0] != None) or (gear not in self.gear and self.gear[0] != None): # Si la config n'est pas bonne
             return False
         else:
             return self.collision(point)
 
     def play_sound(self):
+        """Joue l'alarme de l'env"""
         play_sound(self.sound)
 
     def __repr__(self):
@@ -109,6 +130,13 @@ class Mode():
         self.name = name
 
     def get_enveloppe(self, point, flaps, gear):
+        """
+
+        :param point: point x,y
+        :param flaps: position des flaps
+        :param gear: position du gear
+        :return: L'enveloppe dans lequel se trouve le point dans la configuration consideree, None sion
+        """
         enveloppe_eff = [] #listes des enveloppes ou se trouve le point
         for env in self.list_enveloppes:
             if env.have_inside(point, flaps, gear):
@@ -122,6 +150,8 @@ class Mode():
 
 
     def get_xmin_ymin_xmax_ymax(self):
+        """ Retourne les coordonnees extremes des enveloppes du mode (utile pour les tests)"""
+
         xmin = xmax = self.list_enveloppes[0].vertexes[0][0]
         ymin = ymax = self.list_enveloppes[0].vertexes[0][1]
         for env in self.list_enveloppes:
@@ -200,15 +230,15 @@ class Etat():
         z = 0
         fpa = gamma
         if gamma !=0 and self.get_VerticalSpeed() != 0 :
-            vp = self.get_VerticalSpeed()/math.sin(abs(gamma)) * 0.00508 #Conversion ft/min to m/s
-        else: vp = self.get_ComputedAirSpeed() * 0.514444# Conversion kts to m/s
+            vp = self.get_VerticalSpeed()/math.sin(abs(gamma)) * FTMIN_TO_MS #Conversion ft/min to m/s
+        else: vp = self.get_ComputedAirSpeed() / MS_TO_KTS# Conversion kts to m/s
         psi = 0
         phi = self.get_RollAngle()
         return "StateVector x={0} y={1} z={2} Vp={3} fpa={4} psi={5} phi={6}\n".format(x, y, z, vp, fpa, psi, phi)
 
     def generate_fms(self):
         """ Pour les tests uniquement """
-        return "FMS_TO_GPWS PHASE={0} DA={1} DH={2}\n".format(self.phase, self.da, self.dh)
+        return "FMS_TO_GPWS phase={0}, da={1}, dh={2}\n".format(self.phase, self.da, self.dh)
 
     def generate_config(self):
         """ Pour les tests uniquement """
@@ -231,15 +261,15 @@ class Etat():
 
 
     def change_radio_alt(self, z):
-        z = z / 0.3048 #conversion m to ft
+        z = z / FT_TO_M #conversion m to ft
         if global_etat.init_ralt and  (self.time - self.last_radio) != 0: #On met a jour le terrain closure rate si possible
             self.list[TERRAIN_CLOSURE_RATE] = ((self.get_RadioAltitude() - z)/ (self.time - self.last_radio) )  * 60
         self.list[RADIOALT] = z
         self.last_radio = self.time
 
     def change_state(self, x, y, z, vp, fpa, psi, phi):
-        self.list[COMPUTED_AIR_SPEED] = vp * 1.94384 #conversion ms to kts
-        self.list[VZ] =  - (math.sin(fpa) * vp) * 196.85 #conversion m/s to - ft/min
+        self.list[COMPUTED_AIR_SPEED] = vp * MS_TO_KTS #conversion ms to kts
+        self.list[VZ] =  - (math.sin(fpa) * vp) / FTMIN_TO_MS #conversion m/s to - ft/min
         self.list[ROLL_ANGLE] = math.degrees(abs(phi))
 
     def change_fmsinfo(self, phase, da, dh):
@@ -247,7 +277,7 @@ class Etat():
         self.da = da
         self.dh = dh
         alt_diff = self.max_ralt - self.get_RadioAltitude()
-        if self.phase == TAKEOFF and self.init_ralt and (self.max_ralt - self.get_RadioAltitude() < 0) and self.get_VerticalSpeed() :
+        if self.phase == TAKEOFF and self.init_ralt and (self.max_ralt - self.get_RadioAltitude() < 0) and self.get_VerticalSpeed() > 0:
             self.list[MSL_ALT_LOSS] = alt_diff
         else:
             self.list[MSL_ALT_LOSS] = 0
@@ -320,8 +350,6 @@ def Creation_Modes():
                             "GLIDESLOPE", "sons/nabglideslope2.wav")
     GlideSlopeReduced5 = Enveloppe([[1.3,1000],[4,1000],[4,0],[2.98,0],[1.3,150]],'C',19.5,[None],[DOWN],
                                    "Glideslope (reduced)", "sons/nabglideslope.wav")
-    #ExRollAngle6 = Enveloppe([[10,30],[40,150],[40,500],[180,500],[180,0], [10, 0]],'C',22,[None],[None], "Bank angle",
-    #  "sons/nbankangle.wav")
     ExRollAngle_16 = Enveloppe([[10,30],[40,150],[40,0],[10,0]],'C',22,[None],[None], "Bank angle",
                                "sons/nbankangle.wav")
     ExRollAngle_26 = Enveloppe([[40,0],[40,5000],[180,5000],[180,0]],'C',22,[None],[None], "Bank angle",
@@ -368,7 +396,7 @@ def alert(env, etat):
 
 
 ## Variables globals
-global_etat = Etat(6000,500,2611, 200, 140, 3.5, 60,0,"UP","LANDING")
+global_etat = Etat(0,0,0, 0, 0, 0, 0, 0,"Down","LANDING")
 
 
 if __name__ == '__main__':

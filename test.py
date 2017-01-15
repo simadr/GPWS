@@ -51,7 +51,7 @@ def plot_trajectory(traj, modes, flaps, gear, gamma, phase, mode_test_name):
     """
 
     fig, ax = plt.subplots()
-    fig.text(0.3, 0.95, u'Test du {0} - flaps : {1} | gear : {2} | phase : {3} | gamma : {4}'.format(mode_test_name,flaps, gear, phase, math.degrees(gamma)), fontsize=18)
+    fig.text(0.3, 0.95, u'Test du {0} - flaps : {1} | gear : {2} | phase : {3} | gamma : {4}'.format(mode_test_name,flaps, gear, phase, math.degrees(gamma)), fontsize=15)
     number_of_lines = math.ceil(float(len(modes)) / 3)
     number_of_columns = math.ceil(float(len(modes)) / number_of_lines)
 
@@ -198,17 +198,6 @@ def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
     create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_dg.txt", modes_to_plot = list_modes)
     plt.close()
 
-# traj = [[1500, 2500],[ 6225, 370], [3800, 1450]]
-# mode = gpws.Mode1
-# plot_trajectory(traj,mode, 1, 1)
-mode = gpws.L_Modes[0]
-mode.enable()
-xi, yi, xf, yf = segm_test_diag(mode, sens_parcours = True)
-# create_test(mode1, 0, "Up", "TAKEOFF", -10*math.pi/180, 1750, 6225, 2500, 245, 20, "test_mode1.txt")
-# create_test(mode, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, xi, xf, yi, yf, 20, "test_mode1.txt", gpws.L_Modes)
-# create_test_global(mode,gpws.L_Modes, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, 20)
-
-
 #parse
 usage = "usage: %prog [options]"
 parser = OptionParser(usage=usage)
@@ -277,4 +266,11 @@ def connect(app_name, ivy_bus):
 
 connect(options.app_name, options.ivy_bus)
 
+#Tests
+mode = gpws.L_Modes[0]
+mode.enable()
+xi, yi, xf, yf = segm_test_diag(mode, sens_parcours = True)
+create_test_global(mode,gpws.L_Modes, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, 20)
+
 start_test("mode1traj_diag_dg.txt")
+IvyStop()
