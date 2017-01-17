@@ -95,14 +95,14 @@ def segm_test_diag(mode, sens_parcours): #sens_parcours : True de gauche a droit
     """Cree un segment de test sur la 'diagonale'  du mode"""
     (xmin, ymin, xmax, ymax) = mode.get_xmin_ymin_xmax_ymax()
     if sens_parcours:
-        x_initial = xmin - (xmax -xmin) * 0.2
+        x_initial = xmin
         y_inital = ymax + (ymax - ymin) * 0.2
         x_final = xmax - 0.1 *  (xmax - xmin)
         y_final = ymin + 0.1 * (ymax - ymin)
     else:
         x_initial = xmax - 0.1 *  (xmax - xmin)
         y_inital = ymin + 0.1 * (ymax - ymin)
-        x_final = xmin - (xmax -xmin) * 0.2
+        x_final = xmin
         y_final = ymax + (ymax - ymin) * 0.2
     return x_initial, y_inital, x_final, y_final
 
@@ -110,14 +110,14 @@ def segm_test_rect(mode, position_y, sens_parcours): #position_y : position en o
     """Cree un segment de test 'en ligne droite' du mode"""
     (xmin, ymin, xmax, ymax) = mode.get_xmin_ymin_xmax_ymax()
     if sens_parcours:
-        x_initial = xmin - (xmax -xmin) * 0.2
+        x_initial = xmin
         y_inital = position_y * (ymax - ymin) + ymin
         x_final = xmax - 0.1 *  (xmax - xmin)
         y_final = y_inital
     else:
         x_initial = xmax - 0.1 *  (xmax - xmin)
         y_inital = position_y * (ymax - ymin) + ymin
-        x_final = xmin - (xmax -xmin) * 0.2
+        x_final = xmin
         y_final = y_inital
     return x_initial, y_inital, x_final, y_final
 
@@ -140,8 +140,7 @@ def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_poin
     :return plot la liste d'etats de test (un segment) sur des graphiques representant les enveloppes des modes
 
     """
-    etat = gpws.Etat(15, 5000, 0, 0, 0, 0, 0, flaps, gear, phase)
-    etat.dh = 100
+    etat = gpws.Etat(15, 5000, 0, 0, None, 0, 0, flaps, gear, phase)
     pas_abs = (absf - absi) / nb_points
     pas_ord = (ordf - ordi) / nb_points
     abs = absi
@@ -165,7 +164,6 @@ def create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_poin
         ord += pas_ord
     fic.write("Time t={}\n".format(nb_points))
     fic.close()
-    print traj
     if modes_to_plot == None:
         modes_to_plot = [mode]
 
@@ -186,16 +184,16 @@ def create_test_global(mode,list_modes, phase, flaps, gear, gamma, nb_points):
 
     """
     absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = True)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_gd.txt", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_1.txt", modes_to_plot = list_modes)
     plt.close()
-    absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.33, sens_parcours = False)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_dg.txt", modes_to_plot = list_modes)
+    absi, ordi, absf, ordf = segm_test_rect(mode, position_y = 0.13, sens_parcours = True)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_rect_2.txt", modes_to_plot = list_modes)
     plt.close()
     absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = True)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_gd.txt", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_diag_gd.txt", modes_to_plot = list_modes)
     plt.close()
     absi, ordi, absf, ordf = segm_test_diag(mode, sens_parcours = False)
-    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "traj_diag_dg.txt", modes_to_plot = list_modes)
+    create_test(mode, phase, flaps, gear, gamma, absi, absf, ordi, ordf, nb_points, filename = mode.name + "_traj_diag_dg.txt", modes_to_plot = list_modes)
     plt.close()
 
 #parse
@@ -266,11 +264,44 @@ def connect(app_name, ivy_bus):
 
 connect(options.app_name, options.ivy_bus)
 
+
+
+## Mode 2 ##
+
+def test_mode2():
+    traj_ord = [1000]
+    traj_abs = [2300, 3000, 4000, 5000, 6000]
+    etats =  []
+    gamma = -10
+    for i in range(1, len(traj_abs)):
+        traj_ord.append(traj_ord[i-1] - (traj_abs[i] / 60.0))
+    for i in range(len(traj_abs)):
+        x = traj_abs[i]
+        y = traj_ord[i]
+        etat = gpws.Etat(100,0,0,0,0,0,0,"0","up",gpws.APP)
+        etat.set_xy(x, y, gpws.L_Modes[1])
+        etats.append(etat)
+    plot_trajectory(etats, [gpws.L_Modes[1]], "0", "up", 0, gpws.APP, "mode2")
+    fic = open("test_mode2.txt", 'w')
+    for i in range(len(etats)):
+        etat = etats[i]
+        time = "Time t={}\n".format(i)
+        radio_alt =  etat.generate_radioalt()
+        statevector = etat.generate_statevector(gamma)
+        fms = etat.generate_fms()
+        config = etat.generate_config()
+        fic.write(time)
+        fic.write(radio_alt)
+        fic.write(statevector)
+        fic.write(fms)
+        fic.write(config)
+    fic.write("Time t={}\n".format(len(etats)))
+#test_mode2()
+
 #Tests
 mode = gpws.L_Modes[0]
 mode.enable()
 xi, yi, xf, yf = segm_test_diag(mode, sens_parcours = True)
-create_test_global(mode,gpws.L_Modes, gpws.APP, 0, gpws.DOWN, -10*math.pi/180, 20)
-
-start_test("mode1traj_diag_dg.txt")
+create_test_global(mode,gpws.L_Modes, gpws.APP, "0", gpws.DOWN, -10*math.pi/180, 20)
+start_test("mode1_traj_diag_gd.txt")
 IvyStop()

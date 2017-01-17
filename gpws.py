@@ -221,7 +221,7 @@ class Etat():
 
     def generate_radioalt(self):
         """ Pour les tests uniquement """
-        return "RadioAltimeter groundAlt={}\n".format(self.list[RADIOALT] * 0.3048)
+        return "RadioAltimeter groundAlt={}\n".format(self.list[RADIOALT] * FT_TO_M)
 
     def generate_statevector(self, gamma):
         """ Pour les tests uniquement """
@@ -229,11 +229,11 @@ class Etat():
         y = 0
         z = 0
         fpa = gamma
-        if gamma !=0 and self.get_VerticalSpeed() != 0 :
-            vp = self.get_VerticalSpeed()/math.sin(abs(gamma)) * FTMIN_TO_MS #Conversion ft/min to m/s
+        if gamma !=0 and self.get_VerticalSpeed() != 0 and self.get_ComputedAirSpeed() == None:
+            vp = abs(self.get_VerticalSpeed()/math.sin(gamma)) * FTMIN_TO_MS #Conversion ft/min to m/s
         else: vp = self.get_ComputedAirSpeed() / MS_TO_KTS# Conversion kts to m/s
         psi = 0
-        phi = self.get_RollAngle()
+        phi = math.radians(self.get_RollAngle())
         return "StateVector x={0} y={1} z={2} Vp={3} fpa={4} psi={5} phi={6}\n".format(x, y, z, vp, fpa, psi, phi)
 
     def generate_fms(self):
@@ -256,7 +256,9 @@ class Etat():
         if mode.abs == VZ and gamma != 0:  #si on change la vz, on change la vp
             self.list[COMPUTED_AIR_SPEED]  =   (x * FTMIN_TO_MS)/( math.sin(abs(gamma)) * KTS_TO_MS)
         elif mode.abs == COMPUTED_AIR_SPEED:
-            self.list[VZ] = self.get_ComputedAirSpeed() * math.sin(gamma)
+            self.list[VZ] =  - self.get_ComputedAirSpeed() * math.sin(gamma) * KTS_TO_MS / FTMIN_TO_MS
+        if self.get_ComputedAirSpeed() == None:
+            self.list[COMPUTED_AIR_SPEED] = 0
 
 
 
@@ -336,13 +338,13 @@ def Creation_Modes():
                           "Sink rate", "sons/nabsinkrate.wav")
     PullUp2 = Enveloppe([[2277,220],[3000,790],[8000,790],[8000,0],[2277,0]],'W',3,[None],[None], "Pullup_terrain",
                         "sons/nabterrainaheadpullup.wav", pullup=True)
-    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,[None],
-                         [None], "Terrain", "sons/nabglideslope2.wav")
+    Terrain2 = Enveloppe([[2277,220],[3000,790],[3900,1500],[6000,1800],[8000,1800],[8000,0],[2277,0]],'C',9,["0"],
+                         [None], "Terrain", "sons/nabterrain.wav")
     DontSink3 = Enveloppe([[0,0],[143,1500],[400,1500],[400,0]],'C',18,[None],[None], "Don't sink",
                           "sons/ndontsink.wav")
     TooLowTerrain4 = Enveloppe([[190,0],[190,500],[250,1000],[400,1000],[400,0],[190,0]],'W',4,[None],[None],
                                "Too low terrain", "sons/TooLowTerrain.wav")
-    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,[0],[None], "Too low flaps",
+    TooLowFlaps4 = Enveloppe([[0,0],[0,245],[190,245],[190,0]],'C',16,["0"],[None], "Too low flaps",
                              "sons/nabtoolowflaps.wav")
     TooLowGear4 = Enveloppe([[0,0],[0,500],[190,500],[190,0]],'C',15,[None],[UP], "Too low gear",
                             "sons/nabtoolowgear.wav")
@@ -362,7 +364,7 @@ def Creation_Modes():
     Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4], [APP, LDG, TAKEOFF], COMPUTED_AIR_SPEED, RADIOALT, "mode4")
     Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT, "mode5")
     Mode5.disable()
-    Mode6 = Mode([ExRollAngle_16, ExRollAngle_26],[None],ROLL_ANGLE,RADIOALT, "mode7")
+    Mode6 = Mode([ExRollAngle_16, ExRollAngle_26],[None],ROLL_ANGLE,RADIOALT, "mode6")
 
     return [Mode1,Mode2,Mode3,Mode4,Mode5,Mode6]
 
