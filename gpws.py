@@ -36,6 +36,7 @@ APP = "APPROACH"
 CLIMB = "CLIMB"
 TAKEOFF  = "TAKE-OFF"
 LDG = "LANDING"
+CRZ  = "CRUISE"
 
 #Callouts
 CALLOUTS = [(0, "sons/nappminimuns.wav)"), (10,"sons/abn10.wav"), (20,"sons/abn20.wav"), (30,"sons/abn30.wav"),
@@ -254,9 +255,13 @@ class Etat():
         self.list[mode.abs] = x
         self.list[mode.ord] = y
         if mode.abs == VZ and gamma != 0:  #si on change la vz, on change la vp
-            self.list[COMPUTED_AIR_SPEED]  =   (x * FTMIN_TO_MS)/( math.sin(abs(gamma)) * KTS_TO_MS)
+            self.list[COMPUTED_AIR_SPEED]  =   abs(x * FTMIN_TO_MS/( math.sin(gamma) * KTS_TO_MS))
         elif mode.abs == COMPUTED_AIR_SPEED:
             self.list[VZ] =  - self.get_ComputedAirSpeed() * math.sin(gamma) * KTS_TO_MS / FTMIN_TO_MS
+        elif mode.abs == MSL_ALT_LOSS:
+            if self.get_VerticalSpeed() <= 0:
+                self.list[MSL_ALT_LOSS] = 0
+            self.list[COMPUTED_AIR_SPEED]  =   abs(self.get_VerticalSpeed() * FTMIN_TO_MS/( math.sin(gamma) * KTS_TO_MS))
         if self.get_ComputedAirSpeed() == None:
             self.list[COMPUTED_AIR_SPEED] = 0
 
@@ -268,6 +273,10 @@ class Etat():
             self.list[TERRAIN_CLOSURE_RATE] = ((self.get_RadioAltitude() - z)/ (self.time - self.last_radio) )  * 60
         self.list[RADIOALT] = z
         self.last_radio = self.time
+        if self.phase == TAKEOFF :
+            if z > self.max_ralt:
+                self.max_ralt = z
+        else:self.max_ralt = 0
 
     def change_state(self, x, y, z, vp, fpa, psi, phi):
         self.list[COMPUTED_AIR_SPEED] = vp * MS_TO_KTS #conversion ms to kts
@@ -279,7 +288,7 @@ class Etat():
         self.da = da
         self.dh = dh
         alt_diff = self.max_ralt - self.get_RadioAltitude()
-        if self.phase == TAKEOFF and self.init_ralt and (self.max_ralt - self.get_RadioAltitude() < 0) and self.get_VerticalSpeed() > 0:
+        if self.phase == TAKEOFF and self.init_ralt and (self.max_ralt - self.get_RadioAltitude() > 0) and self.get_VerticalSpeed() > 0:
             self.list[MSL_ALT_LOSS] = alt_diff
         else:
             self.list[MSL_ALT_LOSS] = 0
@@ -328,6 +337,7 @@ class Etat():
         to_print +=  "Computed airspeed = {}\n".format(self.get_ComputedAirSpeed())
         to_print +=  "GlideslopeDeviation = {}\n".format(self.get_GlideSlopeDeviation())
         to_print +=  "Roll angle = {}\n".format(self.get_RollAngle())
+        to_print += "Phase = {}\n".format(self.phase)
         return to_print
 
 def Creation_Modes():
@@ -360,7 +370,7 @@ def Creation_Modes():
 
     Mode1 = Mode([PullUp1,SinkRate1],[None],VZ,RADIOALT, "mode1")
     Mode2 = Mode([PullUp2,Terrain2], [None],TERRAIN_CLOSURE_RATE,RADIOALT, "mode2")
-    Mode3 = Mode([DontSink3],[CLIMB],MSL_ALT_LOSS,RADIOALT, "mode3")
+    Mode3 = Mode([DontSink3],[TAKEOFF],MSL_ALT_LOSS,RADIOALT, "mode3")
     Mode4 = Mode([TooLowTerrain4,TooLowFlaps4,TooLowGear4], [APP, LDG, TAKEOFF], COMPUTED_AIR_SPEED, RADIOALT, "mode4")
     Mode5 = Mode([GlideSlopeReduced5,GlideSlope5],[APP],GLIDE_SLOPE_DEVIATION,RADIOALT, "mode5")
     Mode5.disable()
@@ -398,7 +408,7 @@ def alert(env, etat):
 
 
 ## Variables globals
-global_etat = Etat(0,0,0, 0, 0, 0, 0, 0,"Down","LANDING")
+global_etat = Etat(0,0,0, 0, 0, 0, 0, 0,DOWN, TAKEOFF)
 
 
 if __name__ == '__main__':

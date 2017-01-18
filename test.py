@@ -267,7 +267,6 @@ connect(options.app_name, options.ivy_bus)
 
 
 ## Mode 2 ##
-
 def test_mode2():
     traj_ord = [1000]
     traj_abs = [2300, 3000, 4000, 5000, 6000]
@@ -298,10 +297,61 @@ def test_mode2():
     fic.write("Time t={}\n".format(len(etats)))
 #test_mode2()
 
+## Mode 3 ##
+def test_mode3():
+    traj_ord = [1600, 1630, 1660, 1630, 1600, 1570, 1520, 1490, 1430, 1440, 1420]
+    traj_abs = [0, 0, 0, 30, 60, 90, 140, 170, 230, 0, 240]
+    etats =  []
+    gammas = []
+    phase = gpws.TAKEOFF
+    for i in range(len(traj_abs)):
+        x = traj_abs[i]
+        y = traj_ord[i]
+        (vz, gamma) = (-10, -10) if (i == 0 or traj_ord[i-1] < traj_ord[i]) else (10, 10)
+        gammas.append(gamma)
+        etat = gpws.Etat(vz, 0, 0, 0, 0, 0, 0, "0", "up", phase)
+        etat.set_xy(x, y, gpws.L_Modes[2], gammas[i])
+        etats.append(etat)
+    plot_trajectory(etats, gpws.L_Modes, "0", "up", 0, phase, "mode3")
+    fic = open("test_mode3.txt", 'w')
+    for i in range(len(etats)):
+        etat = etats[i]
+        time = "Time t={}\n".format(i)
+        radio_alt =  etat.generate_radioalt()
+        statevector = etat.generate_statevector(gammas[i])
+        fms = etat.generate_fms()
+        config = etat.generate_config()
+        fic.write(time)
+        fic.write(radio_alt)
+        fic.write(statevector)
+        fic.write(fms)
+        fic.write(config)
+    fic.write("Time t={}\n".format(len(etats)))
+
+
 #Tests
-mode = gpws.L_Modes[0]
-mode.enable()
-xi, yi, xf, yf = segm_test_diag(mode, sens_parcours = True)
-create_test_global(mode,gpws.L_Modes, gpws.APP, "0", gpws.DOWN, -10*math.pi/180, 20)
+modes = gpws.L_Modes
+
+
+
+## Mode 1 ##
+create_test_global(modes[0],gpws.L_Modes, gpws.APP, "0", gpws.DOWN, -10*math.pi/180, 20)
 start_test("mode1_traj_diag_gd.txt")
+
+## Mode 2 ##
+# test_mode2()
+# start_test("test_mode2.txt")
+
+## Mode 3 ##
+# test_mode3()
+# start_test("test_mode3.txt")
+
+## Mode 4 ##
+# create_test_global(modes[3],gpws.L_Modes, gpws.APP, "0", gpws.UP, -10*math.pi/180, 20)
+# start_test("mode4_traj_rect_2.txt")
+
+## Mode 6 ##
+# create_test_global(modes[5],gpws.L_Modes, gpws.LDG, "0", gpws.DOWN, -10*math.pi/180, 20)
+# start_test("mode6_traj_rect_2.txt")
+
 IvyStop()
